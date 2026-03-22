@@ -11,8 +11,6 @@ Builds on: All previous steps"""
 import from tools { search_papers, get_citations, save_md }
 import from byllm.lib { Model }
 
-glob llm = Model("gpt-4o", config={"verbose": True});
-
 # ===== Typed evaluation schema (Extract) =====
 enum Verdict { PUBLISH_READY, NEEDS_REVISION }
 
