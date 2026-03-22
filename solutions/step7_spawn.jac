@@ -1,12 +1,12 @@
 """Step 7: Spawn — Flow primitive.
 Dispatch multiple walkers simultaneously, each with its own
 scoped tools and context. Merge their results.
-Spawn enables parallel execution: split work → run concurrently → synthesize.
+Spawn enables parallel execution: split work -> run concurrently -> synthesize.
 
 Primitive: Spawn (parallelize work and aggregate results)
 Builds on: Generate (Step 1), Invoke (Step 3)"""
 
-import from tools { search_papers, get_citations }
+import from tools { search_papers, get_citations, save_md }
 
 # --- Specialized research walkers ---
 walker HardwareResearcher {
@@ -76,6 +76,9 @@ walker SurveyAgent {
         # Generate: synthesize all findings
         self.response = self.synthesize(self.topic, hw.result, sw.result, ai.result);
         print(f"\n=== Unified Survey ===\n{self.response}");
+
+        md = f"# Step 7: Spawn\n\n## Topic\n{self.topic}\n\n## Hardware Findings\n{hw.result}\n\n## Software Findings\n{sw.result}\n\n## AI Findings\n{ai.result}\n\n## Unified Survey\n{self.response}\n";
+        save_md("step7_spawn.md", md);
     }
 }
 

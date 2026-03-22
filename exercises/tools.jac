@@ -2,6 +2,7 @@
 These are regular functions that the LLM can use via Invoke."""
 
 import json;
+import os;
 import from urllib.request { urlopen, Request }
 import from urllib.parse { quote }
 import from xml.etree.ElementTree { fromstring }
@@ -44,6 +45,14 @@ def get_citations(paper_title: str) -> str {
 }
 
 def summarize_abstract(abstract: str) -> str by llm();
+
+def save_md(filename: str, content: str) {
+    os.makedirs("output", exist_ok=True);
+    f = open(f"output/{filename}", "w");
+    f.write(content);
+    f.close();
+    print(f"\n>> Output saved to output/{filename}");
+}
 
 sem search_papers = "Search for academic papers matching a query. Returns titles and abstracts.";
 sem get_citations = "Get citation count for a paper by title.";

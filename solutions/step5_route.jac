@@ -5,6 +5,8 @@ No if/else chains. The graph topology IS the routing table.
 Primitive: Route (pick one of N directions)
 Builds on: Generate (Step 1)"""
 
+import from tools { save_md }
+
 node HardwareExpert {
     has description: str = "Expert in CPU architecture, GPU design, memory hierarchies, and chip fabrication";
 
@@ -57,4 +59,7 @@ with entry {
     );
     print(f"Query: {assistant.query}");
     print(f"Response: {assistant.response}");
+
+    md = f"# Step 5: Route\n\n## Query\n{assistant.query}\n\n## Routed Response\n{assistant.response}\n";
+    save_md("step5_route.md", md);
 }

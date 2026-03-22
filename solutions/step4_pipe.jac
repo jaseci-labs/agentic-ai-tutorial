@@ -7,6 +7,8 @@ to compose multiple Mind primitives into a workflow.
 Primitive: Pipe (sequential task flow)
 Builds on: Generate (Step 1)"""
 
+import from tools { save_md }
+
 def draft_explanation(topic: str) -> str by llm();
 def add_examples(explanation: str) -> str by llm();
 def write_summary(detailed_text: str) -> str by llm();
@@ -17,7 +19,7 @@ sem write_summary = "Condense a detailed explanation into a concise 2-3 sentence
 
 with entry {
     # Pipe: each Generate's output flows into the next as input.
-    # draft → enrich → condense
+    # draft -> enrich -> condense
 
     raw = draft_explanation("How cache coherence protocols work in multicore processors");
     print("=== Draft ===");
@@ -30,4 +32,7 @@ with entry {
     summary = write_summary(enriched);
     print("\n=== Summary ===");
     print(summary);
+
+    md = f"# Step 4: Pipe\n\n## Topic\nHow cache coherence protocols work in multicore processors\n\n## Stage 1: Draft\n{raw}\n\n## Stage 2: With Examples\n{enriched}\n\n## Stage 3: Summary\n{summary}\n";
+    save_md("step4_pipe.md", md);
 }

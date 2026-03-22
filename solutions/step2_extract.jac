@@ -2,7 +2,9 @@
 The return type constrains what the LLM can produce.
 The compiler enforces the schema — no more 'parse and pray.'
 
-Primitive: Extract (LLM → typed data)"""
+Primitive: Extract (LLM -> typed data)"""
+
+import from tools { save_md }
 
 enum Topic { HARDWARE, SOFTWARE, NETWORKS, AI, OTHER }
 
@@ -35,4 +37,8 @@ with entry {
     for (idx, contribution) in enumerate(result.key_contributions) {
         print(f"{idx + 1}. {contribution}");
     }
+
+    contribs = "\n".join([f"- {c}" for c in result.key_contributions]);
+    md = f"# Step 2: Extract\n\n## Paper: Attention Is All You Need\n\n| Field | Value |\n|-------|-------|\n| **Topic** | {result.topic} |\n| **Summary** | {result.one_line_summary} |\n\n## Key Contributions\n{contribs}\n";
+    save_md("step2_extract.md", md);
 }
