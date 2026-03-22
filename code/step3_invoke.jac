@@ -7,11 +7,7 @@ reasons about which tool to call, acts, and observes the result.
 Primitive: Invoke (LLM → tool calls)
 Builds on: Generate (Step 1)"""
 
-import from tools { search_papers, get_citations }
-
-# An additional LLM-powered tool — the LLM can call other LLM functions as tools.
-def summarize_abstract(abstract: str) -> str by llm();
-sem summarize_abstract = "Summarize a paper abstract in one sentence.";
+import from tools { search_papers, get_citations, summarize_abstract }
 
 # The LLM decides which tools to call and in what order.
 # by llm(tools=[...]) enables the ReAct cycle: reason → act → observe → repeat.

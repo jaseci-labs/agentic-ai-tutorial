@@ -43,5 +43,8 @@ def get_citations(paper_title: str) -> str {
     }
 }
 
+def summarize_abstract(abstract: str) -> str by llm();
+
 sem search_papers = "Search for academic papers matching a query. Returns titles and abstracts.";
 sem get_citations = "Get citation count for a paper by title.";
+sem summarize_abstract = "Summarize a paper abstract in one sentence.";
