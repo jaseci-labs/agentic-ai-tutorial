@@ -10,7 +10,6 @@ if ! grep -q 'HOME/.local/bin' "$HOME/.zshrc" 2>/dev/null; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
 fi
 
-# Suppress known JAC enum layout-compatibility warning
 alias jac='jac 2> >(grep -v "layout-compatible" >&2)'
 
 echo ""
