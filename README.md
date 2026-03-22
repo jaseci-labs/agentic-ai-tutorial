@@ -1,12 +1,20 @@
 # ASPLOS '26 Tutorial: Building Agentic AI Systems with Jac
 
-Learn to build agentic AI systems using **Jac** — a language designed around the 7 primitives of agentic computation. By the end of this tutorial you will have built a self-correcting, parallel research agent from scratch, one primitive at a time.
+Learn to build agentic AI systems using **Jac** — a language designed around the 7 primitives of agentic computation. By the end of this hands-on session you will have built a self-correcting, parallel research agent from scratch, one primitive at a time.
 
 ---
 
-## What You Will Learn
+## Repository Structure
 
-This tutorial introduces 7 composable primitives split into two layers:
+```
+exercises/          <- You work here (skeletons with TODOs)
+solutions/          <- Reference solutions (peek if stuck)
+output/             <- Generated markdown files (created at runtime)
+```
+
+---
+
+## What You Will Build
 
 **Mind primitives** — what the LLM does:
 
@@ -51,22 +59,66 @@ export OPENAI_API_KEY="your-key-here"
 
 ---
 
-## Running the Steps
+## How to Work Through the Exercises
 
-Each step is a self-contained `.jac` file in the `code/` directory:
+Each exercise file has **TODO** markers where you write the key primitive. The boilerplate and types are provided.
+
+### 1. Open the exercise
 
 ```bash
-jac run code/step1_generate.jac
-jac run code/step2_extract.jac
-jac run code/step3_invoke.jac
-jac run code/step4_pipe.jac
-jac run code/step5_route.jac
-jac run code/step6_loop.jac
-jac run code/step7_spawn.jac
-jac run code/step8_composition.jac
+# Work in the exercises/ directory
+cd exercises/
 ```
 
-Each file begins with a docstring explaining the primitive covered, what it builds on, and what to observe in the output.
+### 2. Fill in the TODOs
+
+Open `step1.jac` in your editor. Look for the `# TODO` comments — they tell you exactly what to write.
+
+### 3. Run your code
+
+```bash
+jac run step1.jac
+```
+
+### 4. View the output
+
+Each step writes a markdown file to `output/`. Open it to see your results formatted nicely:
+
+```bash
+# On macOS
+open output/step1_generate.md
+
+# Or just cat it
+cat output/step1_generate.md
+```
+
+### 5. If you get stuck
+
+The complete solution is in `solutions/`:
+
+```bash
+jac run ../solutions/step1_generate.jac
+```
+
+---
+
+## Exercise Progression
+
+```bash
+# Mind primitives
+jac run step1.jac    # Generate: LLM returns free text
+jac run step2.jac    # Extract:  LLM returns typed data
+jac run step3.jac    # Invoke:   LLM calls tools (ReAct)
+
+# Flow primitives
+jac run step4.jac    # Pipe:     Sequential chaining
+jac run step5.jac    # Route:    LLM-directed graph traversal
+jac run step6.jac    # Loop:     Self-correction cycle
+jac run step7.jac    # Spawn:    Parallel walkers
+
+# Capstone
+jac run step8.jac    # All 7 primitives in one agent
+```
 
 ---
 

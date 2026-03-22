@@ -1,3 +1,9 @@
+# Tutorial output (generated at runtime)
+output/
+
+# Jac build artifacts
+.jac/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

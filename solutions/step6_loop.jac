@@ -1,10 +1,12 @@
 """Step 6: Loop — Flow primitive.
 Generate a draft, judge it, revise if needed, repeat.
 Loop combined with Extract (typed evaluation) creates
-self-correcting behavior: Generate → Extract → improve → Loop.
+self-correcting behavior: Generate -> Extract -> improve -> Loop.
 
 Primitive: Loop (repeat until done)
 Builds on: Generate (Step 1), Extract (Step 2)"""
+
+import from tools { save_md }
 
 enum Quality { GOOD, NEEDS_IMPROVEMENT }
 
@@ -21,6 +23,7 @@ walker TutorialWriter {
     has iterations: int = 0;
     has max_iterations: int = 3;
     has review_log: list[str] = [];
+    has md_parts: list[str] = [];
 
     def draft_explanation(topic: str) -> str by llm();
     def evaluate(explanation: str, topic: str) -> Review by llm();
@@ -31,6 +34,7 @@ walker TutorialWriter {
         self.draft = self.draft_explanation(self.topic);
         print(f"=== Draft v1 ===");
         print(self.draft);
+        self.md_parts.append(f"# Step 6: Loop\n\n## Topic\n{self.topic}\n\n## Draft v1\n{self.draft}\n");
 
         # Loop: repeat evaluation and improvement until quality is GOOD
         while self.iterations < self.max_iterations {
@@ -47,6 +51,10 @@ walker TutorialWriter {
             print(f"Strengths: {review.strengths}");
             print(f"Weaknesses: {review.weaknesses}");
 
+            strengths_md = "\n".join([f"- {s}" for s in review.strengths]);
+            weaknesses_md = "\n".join([f"- {w}" for w in review.weaknesses]);
+            self.md_parts.append(f"\n## Review Round {self.iterations}\n- **Quality:** {review.quality}\n- **Strengths:**\n{strengths_md}\n- **Weaknesses:**\n{weaknesses_md}\n- **Suggestion:** {review.suggestion}\n");
+
             if review.quality == Quality.GOOD {
                 print("\nApproved!");
                 break;
@@ -57,10 +65,14 @@ walker TutorialWriter {
             self.draft = self.improve(self.draft, feedback);
             print(f"\n=== Draft v{self.iterations + 1} ===");
             print(self.draft);
+            self.md_parts.append(f"\n## Draft v{self.iterations + 1}\n{self.draft}\n");
         }
 
         print(f"\n=== Final ({self.iterations} revision(s)) ===");
         print(self.draft);
+
+        self.md_parts.append(f"\n## Final ({self.iterations} revision(s))\n{self.draft}\n");
+        save_md("step6_loop.md", "\n".join(self.md_parts));
 
         report {
             "topic": self.topic,

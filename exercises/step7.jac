@@ -1,14 +1,21 @@
-"""Step 7: Spawn — Flow primitive.
+"""Exercise 7: Spawn — Flow primitive.
 Dispatch multiple walkers simultaneously, each with its own
 scoped tools and context. Merge their results.
 Spawn enables parallel execution: split work -> run concurrently -> synthesize.
 
 Primitive: Spawn (parallelize work and aggregate results)
-Builds on: Generate (Step 1), Invoke (Step 3)"""
+Builds on: Generate (Step 1), Invoke (Step 3)
+
+YOUR TASK:
+  In the SurveyAgent walker, spawn the three researcher walkers
+  in parallel using `flow`, wait for all results, then synthesize.
+
+HINT: Look at solutions/step7_spawn.jac if you get stuck.
+"""
 
 import from tools { search_papers, get_citations, save_md }
 
-# --- Specialized research walkers ---
+# --- Specialized research walkers (provided) ---
 walker HardwareResearcher {
     has topic: str;
     has result: str = "";
@@ -58,26 +65,35 @@ walker SurveyAgent {
     can start with Root entry {
         print(f"=== Surveying: {self.topic} ===\n");
 
-        # Spawn: launch all three researchers concurrently
-        print("Spawning parallel researchers...");
-        hw_task = flow root spawn HardwareResearcher(topic=self.topic);
-        sw_task = flow root spawn SoftwareResearcher(topic=self.topic);
-        ai_task = flow root spawn AIResearcher(topic=self.topic);
+        # TODO: Spawn all three researchers in PARALLEL using `flow`.
+        #
+        # Pattern:
+        #   task = flow root spawn WalkerName(args...);
+        #
+        # 1. Spawn HardwareResearcher, SoftwareResearcher, AIResearcher
+        #    Each with topic=self.topic
+        #    Use `flow` to make them async (run in parallel)
 
-        # Wait for all to complete
-        hw = wait hw_task;
-        sw = wait sw_task;
-        ai = wait ai_task;
 
-        print(f"\n--- Hardware Findings ---\n{hw.result}");
-        print(f"\n--- Software Findings ---\n{sw.result}");
-        print(f"\n--- AI Findings ---\n{ai.result}");
+        # TODO: Wait for all three to complete.
+        #
+        # Pattern:
+        #   result = wait task;
+        #
+        # Then access result.result to get each researcher's findings.
 
-        # Generate: synthesize all findings
-        self.response = self.synthesize(self.topic, hw.result, sw.result, ai.result);
+
+        # TODO: Print each researcher's findings.
+
+
+        # TODO: Synthesize all findings into a unified survey.
+        #   self.response = self.synthesize(self.topic, hw.result, sw.result, ai.result);
+
+
         print(f"\n=== Unified Survey ===\n{self.response}");
 
-        md = f"# Step 7: Spawn\n\n## Topic\n{self.topic}\n\n## Hardware Findings\n{hw.result}\n\n## Software Findings\n{sw.result}\n\n## AI Findings\n{ai.result}\n\n## Unified Survey\n{self.response}\n";
+        # Save output as markdown
+        md = f"# Step 7: Spawn\n\n## Topic\n{self.topic}\n\n## Unified Survey\n{self.response}\n";
         save_md("step7_spawn.md", md);
     }
 }

@@ -1,11 +1,19 @@
-"""Step 2: Extract — Mind primitive.
+"""Exercise 2: Extract — Mind primitive.
 The return type constrains what the LLM can produce.
 The compiler enforces the schema — no more 'parse and pray.'
 
-Primitive: Extract (LLM -> typed data)"""
+Primitive: Extract (LLM -> typed data)
+
+YOUR TASK:
+  Define a function `classify_paper` that returns a typed PaperClassification
+  object. The LLM must conform to the schema below.
+
+HINT: Look at solutions/step2_extract.jac if you get stuck.
+"""
 
 import from tools { save_md }
 
+# These types are provided — the LLM's output MUST conform to this schema.
 enum Topic { HARDWARE, SOFTWARE, NETWORKS, AI, OTHER }
 
 obj PaperClassification {
@@ -14,8 +22,15 @@ obj PaperClassification {
     has key_contributions: list[str];
 }
 
-def classify_paper(title: str, abstract: str) -> PaperClassification by llm();
-sem classify_paper = "Classify a research paper by its title and abstract.";
+# TODO: Define a `classify_paper` function that:
+#   - Takes title (str) and abstract (str) as inputs
+#   - Returns a PaperClassification (not str — a typed object!)
+#   - Delegates to the LLM using `by llm()`
+#
+# Then add a semantic hint:
+#   sem classify_paper = "Classify a research paper by its title and abstract.";
+
+
 
 with entry {
     result = classify_paper(
@@ -38,6 +53,7 @@ with entry {
         print(f"{idx + 1}. {contribution}");
     }
 
+    # Save output as markdown
     contribs = "\n".join([f"- {c}" for c in result.key_contributions]);
     md = f"# Step 2: Extract\n\n## Paper: Attention Is All You Need\n\n| Field | Value |\n|-------|-------|\n| **Topic** | {result.topic} |\n| **Summary** | {result.one_line_summary} |\n\n## Key Contributions\n{contribs}\n";
     save_md("step2_extract.md", md);
