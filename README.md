@@ -1,4 +1,4 @@
-# ASPLOS '26 Tutorial: Building Agentic AI Systems with Jac
+# Agentic AI Tutorial: Building Agentic AI Systems with Jac
 
 Learn to build agentic AI systems using **Jac** — a language designed around the 7 primitives of agentic computation. By the end of this hands-on session you will have built a self-correcting, parallel research agent from scratch, one primitive at a time.
 
