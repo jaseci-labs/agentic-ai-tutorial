@@ -1,129 +1,139 @@
-# Agentic AI Tutorial: Building Agentic AI Systems with Jac
+# JacHacks: Build an AI Agent in 30 Minutes
 
-Learn to build agentic AI systems using **Jac** — a language designed around the 7 primitives of agentic computation. By the end of this hands-on session you will have built a self-correcting, parallel research agent from scratch, one primitive at a time.
+Learn the 4 core primitives of agentic AI — and build a working **Hackathon Pitch Builder** agent along the way.
 
----
-
-## Repository Structure
-
-```
-exercises/          <- You work here (skeletons with TODOs)
-solutions/          <- Reference solutions (peek if stuck)
-output/             <- Generated markdown files (created at runtime)
-```
+> This repo also doubles as a **reference for AI coding assistants** working on Jac projects. See [CLAUDE.md](CLAUDE.md) for the full patterns guide.
 
 ---
 
-## What You Will Build
+## What We're Building
 
-**Mind primitives** — what the LLM does:
+A Hackathon Pitch Builder: you give it your interests and skills, and it brainstorms ideas, structures a pitch, researches similar projects, and routes you to the right domain mentor — all autonomously.
 
-| Step | Primitive | What it does |
-|------|-----------|--------------|
-| 1 | **Generate** | LLM returns free text from a function signature |
-| 2 | **Extract** | LLM returns structured, typed data — enforced by the compiler |
-| 3 | **Invoke** | LLM calls tools, observes results, and loops (ReAct cycle) |
-
-**Flow primitives** — how work moves:
-
-| Step | Primitive | What it does |
-|------|-----------|--------------|
-| 4 | **Pipe** | Chain operations sequentially |
-| 5 | **Route** | LLM picks a path from a graph of nodes |
-| 6 | **Loop** | Repeat until a typed quality check passes |
-| 7 | **Spawn** | Run multiple walkers in parallel and merge results |
-
-**Step 8** puts all 7 together into a single self-correcting parallel research agent.
+We build it in 4 steps, one primitive per step.
 
 ---
 
 ## Setup
 
-### 1. Run the setup script
-
 ```bash
-source setup.sh
-```
+# 1. Install the Jac runtime
+pip install jaclang
 
-This will:
-- Install the Jac language runtime (standalone binary)
-- Add `jac` to your PATH
-
-### 2. Set your API key
-
-You will receive an OpenAI API key at the start of the tutorial. Export it in your terminal:
-
-```bash
+# 2. Set your OpenAI API key (you'll get one at the start of the session)
 export OPENAI_API_KEY="your-key-here"
 ```
 
 ---
 
-## How to Work Through the Exercises
+## Run the Full App (web UI)
 
-Each exercise file has **TODO** markers where you write the key primitive. The boilerplate and types are provided.
-
-### 1. Open the exercise
+After the workshop — or to demo during it — run the full web app:
 
 ```bash
-# Work in the exercises/ directory
-cd exercises/
+jac start app.jac
+# open http://localhost:8000
 ```
 
-### 2. Fill in the TODOs
+This starts a server with the complete Hackathon Pitch Builder UI.
+All 4 steps are wired together in the browser — each step unlocks when the previous one completes.
 
-Open `step1.jac` in your editor. Look for the `# TODO` comments — they tell you exactly what to write.
-
-### 3. Run your code
-
-```bash
-jac run step1.jac
+**Frontend files:**
 ```
-
-### 4. View the output
-
-Each step writes a markdown file to `output/`. Open it to see your results formatted nicely:
-
-```bash
-# On macOS
-open output/step1_generate.md
-
-# Or just cat it
-cat output/step1_generate.md
-```
-
-### 5. If you get stuck
-
-The complete solution is in `solutions/`:
-
-```bash
-jac run ../solutions/step1_generate.jac
+frontend/
+├── App.cl.jac     ← main layout + state management
+├── Step1.cl.jac   ← Generate: brainstorm form
+├── Step2.cl.jac   ← Extract: structured pitch cards
+├── Step3.cl.jac   ← Invoke: research + GitHub results
+├── Step4.cl.jac   ← Route: mentor advice
+└── styles.css     ← dark hackathon theme
 ```
 
 ---
 
-## Exercise Progression
+## The 4 Primitives
 
-```bash
-# Mind primitives
-jac run step1.jac    # Generate: LLM returns free text
-jac run step2.jac    # Extract:  LLM returns typed data
-jac run step3.jac    # Invoke:   LLM calls tools (ReAct)
+### Step 1 — Generate
 
-# Flow primitives
-jac run step4.jac    # Pipe:     Sequential chaining
-jac run step5.jac    # Route:    LLM-directed graph traversal
-jac run step6.jac    # Loop:     Self-correction cycle
-jac run step7.jac    # Spawn:    Parallel walkers
+The LLM fills in any function body. The signature IS the prompt.
 
-# Capstone
-jac run step8.jac    # All 7 primitives in one agent
+```jac
+"""Brainstorm 3 creative hackathon project ideas based on interests and skills."""
+def brainstorm_ideas(interests: str, skills: str) -> str by llm();
 ```
+
+---
+
+### Step 2 — Extract
+
+Return a typed object instead of `str`. The compiler enforces the schema — no JSON parsing, no "parse and pray."
+
+```jac
+obj HackathonPitch {
+    has title: str;
+    has problem: str;
+    has tech_stack: list[str];
+    has difficulty: Difficulty;
+    has track: Track;
+}
+
+"""Turn a raw hackathon idea into a structured, compelling pitch."""
+def structure_pitch(raw_idea: str) -> HackathonPitch by llm();
+```
+
+---
+
+### Step 3 — Invoke
+
+Give the LLM a list of tools. It decides which to call, reads the results, and loops until it has a complete answer (ReAct cycle).
+
+```jac
+"""Research a hackathon idea: find similar GitHub projects, suggest a tech stack,
+and estimate if it's buildable in 24 hours."""
+def research_idea(idea: str) -> str by llm(
+    tools=[search_github, describe_tech_stack, estimate_build_time]
+);
+```
+
+---
+
+### Step 4 — Route
+
+The LLM reads node descriptions and picks where a walker goes. No if/else. The graph IS the routing table.
+
+```jac
+walker HackathonAdvisor {
+    has pitch: str;
+
+    can route with Root entry {
+        visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch});
+    }
+}
+```
+
+---
+
+## There Are 3 More Primitives
+
+This workshop covers the 4 most important ones. Jac has 7 total:
+
+| Primitive | What it does |
+|-----------|-------------|
+| **Generate** | LLM returns free text |
+| **Extract** | LLM returns typed, schema-validated data |
+| **Invoke** | LLM calls tools in a ReAct loop |
+| **Route** | LLM picks a path through a graph |
+| **Pipe** | Chain operations sequentially (output → next input) |
+| **Loop** | Repeat until a typed quality check passes |
+| **Spawn** | Run multiple walkers in parallel and merge results |
+
+See [CLAUDE.md](CLAUDE.md) for complete working examples of all 7 primitives.
 
 ---
 
 ## Resources
 
-- Jac documentation: https://docs.jaseci.org
+- Jac docs: https://docs.jaseci.org
 - Jaseci GitHub: https://github.com/Jaseci-Labs/jaseci
+- JacHacks: https://jachacks.org
 - Community Discord: https://discord.gg/6j3QNdtcN6
