@@ -2,7 +2,7 @@
 name = "jachacks-pitch-builder"
 version = "0.1.0"
 description = "Hackathon Pitch Builder — JacHacks agentic AI workshop"
-entry-point = "app.jac"
+entry-point = "main.jac"
 
 [dependencies]
 jac-mcp = "~=0.1"
