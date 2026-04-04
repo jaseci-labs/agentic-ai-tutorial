@@ -18,7 +18,7 @@ We build it in 4 steps, one primitive per step.
 
 ```bash
 # 1. Install the Jac runtime
-pip install jaclang
+pip install jaseci
 
 # 2. Set your OpenAI API key (you'll get one at the start of the session)
 export OPENAI_API_KEY="your-key-here"

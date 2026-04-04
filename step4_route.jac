@@ -73,23 +73,20 @@ walker HackathonAdvisor {
     has results: list = [];
 
     can route with Root entry {
-        web     = WebDevMentor();
-        mob     = MobileMentor();
-        aiml    = AIMLMentor();
-        game    = GameDevMentor();
+        # web     = WebDevMentor();
+        # mob     = MobileMentor();
+        # aiml    = AIMLMentor();
+        # game    = GameDevMentor();
         collect = CollectNode();
-        here ++> web;
-        here ++> mob;
-        here ++> aiml;
-        here ++> game;
-        web  ++> collect;
-        mob  ++> collect;
-        aiml ++> collect;
-        game ++> collect;
+        here ++> WebDevMentor() ++> collect;
+        here ++> MobileMentor() ++> collect;
+        here ++> AIMLMentor() ++> collect;
+        here ++> GameDevMentor() ++> collect;
         # Route: LLM reads each node's description, visits the best match(es).
         # Each visited node flow-spawns an AdviceWorker — all run in parallel.
         visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch});
         visit collect;
+        
     }
 
     can collect with CollectNode entry {
