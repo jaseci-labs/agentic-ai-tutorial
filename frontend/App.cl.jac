@@ -42,7 +42,7 @@ def:pub App() -> JsxElement {
         loading_step = 1;
         errors = {};
         try {
-            result = root() spawn run_brainstorm(interests=interests, skills=skills);
+            result = root spawn run_brainstorm(interests=interests, skills=skills);
             ideas = result.reports[0];
             raw_idea = ideas;           # pre-fill step 2 input
             completed = 1;
@@ -58,7 +58,7 @@ def:pub App() -> JsxElement {
         loading_step = 2;
         errors = {};
         try {
-            result = root() spawn run_structure(raw_idea=raw_idea, interests=interests, skills=skills);
+            result = root spawn run_structure(raw_idea=raw_idea, interests=interests, skills=skills);
             pitch = result.reports[0];
             # Pre-fill downstream steps from structured pitch
             research_query = str(pitch["title"] or "") + " — " + str(pitch["solution"] or "");
@@ -80,7 +80,7 @@ def:pub App() -> JsxElement {
         loading_step = 3;
         errors = {};
         try {
-            result = root() spawn run_research(
+            result = root spawn run_research(
                 idea=research_query,
                 title=str(pitch["title"] or ""),
                 solution=str(pitch["solution"] or "")
@@ -99,7 +99,7 @@ def:pub App() -> JsxElement {
         loading_step = 4;
         errors = {};
         try {
-            result = root() spawn run_route(
+            result = root spawn run_route(
                 title=str(pitch["title"] or ""),
                 problem=str(pitch["problem"] or ""),
                 solution=str(pitch["solution"] or ""),
