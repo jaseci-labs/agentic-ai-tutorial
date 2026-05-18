@@ -42,8 +42,7 @@ def:pub App() -> JsxElement {
         loading_step = 1;
         errors = {};
         try {
-            result = await run_brainstorm(interests, skills);
-            ideas = result["ideas"];
+            ideas = await run_brainstorm(interests, skills);
             raw_idea = ideas;           # pre-fill step 2 input
             completed = 1;
         } except Exception as e {
@@ -58,8 +57,7 @@ def:pub App() -> JsxElement {
         loading_step = 2;
         errors = {};
         try {
-            result = await run_structure(raw_idea, interests, skills);
-            pitch = result;
+            pitch = await run_structure(raw_idea, interests, skills);
             # Pre-fill downstream steps from structured pitch
             research_query = str(pitch["title"] or "") + " — " + str(pitch["solution"] or "");
             pitch_summary = (
@@ -80,12 +78,11 @@ def:pub App() -> JsxElement {
         loading_step = 3;
         errors = {};
         try {
-            result = await run_research(
+            research = await run_research(
                 research_query,
                 str(pitch["title"] or ""),
                 str(pitch["solution"] or "")
             );
-            research = result["research"];
             completed = 3;
         } except Exception as e {
             errors = {"3": str(e)};
@@ -99,7 +96,7 @@ def:pub App() -> JsxElement {
         loading_step = 4;
         errors = {};
         try {
-            result = await run_route(
+            mentor_results = await run_route(
                 str(pitch["title"] or ""),
                 str(pitch["problem"] or ""),
                 str(pitch["solution"] or ""),
@@ -107,7 +104,6 @@ def:pub App() -> JsxElement {
                 str(pitch["wow_factor"] or ""),
                 research
             );
-            mentor_results = list(result["results"]) if result["results"] else [];
             completed = 4;
         } except Exception as e {
             errors = {"4": str(e)};

@@ -166,30 +166,21 @@ walker HackathonAdvisor {
 
 # ── Public server functions (called from frontend via sv import) ───────────────
 
-def:pub run_brainstorm(interests: str, skills: str) -> dict {
-    return {"ideas": brainstorm_ideas(interests, skills)};
+def:pub run_brainstorm(interests: str, skills: str) -> str {
+    return brainstorm_ideas(interests, skills);
 }
 
-def:pub run_structure(raw_idea: str, interests: str, skills: str) -> dict {
+def:pub run_structure(raw_idea: str, interests: str, skills: str) -> HackathonPitch {
     context = f"{raw_idea}\n\nBuilder background — interests: {interests}, skills: {skills}" if interests or skills else raw_idea;
-    p = structure_pitch(context);
-    return {
-        "title": p.title,
-        "problem": p.problem,
-        "solution": p.solution,
-        "tech_stack": p.tech_stack,
-        "wow_factor": p.wow_factor,
-        "difficulty": str(p.difficulty),
-        "track": str(p.track)
-    };
+    return structure_pitch(context);
 }
 
-def:pub run_research(idea: str, title: str, solution: str) -> dict {
+def:pub run_research(idea: str, title: str, solution: str) -> str {
     query = idea if idea else f"{title}: {solution}";
-    return {"research": research_idea(query)};
+    return research_idea(query);
 }
 
-def:pub run_route(title: str, problem: str, solution: str, tech_stack: list, wow_factor: str, research: str) -> dict {
+def:pub run_route(title: str, problem: str, solution: str, tech_stack: list, wow_factor: str, research: str) -> list {
     # Build a rich context string so mentors give specific, not generic, advice
     pitch = f"""Project: {title}
 
@@ -204,7 +195,7 @@ Wow factor: {wow_factor}
 Research findings:
 {research}""";
     advisor = root() spawn HackathonAdvisor(pitch=pitch);
-    return {"results": advisor.results};
+    return advisor.results;
 }
 
 # ── Client entry ───────────────────────────────────────────────────────────────
