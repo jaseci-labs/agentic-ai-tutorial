@@ -166,36 +166,62 @@ walker HackathonAdvisor {
 
 # ── Public server functions (called from frontend via sv import) ───────────────
 
-def:pub run_brainstorm(interests: str, skills: str) -> str {
-    return brainstorm_ideas(interests, skills);
+walker:pub run_brainstorm {
+    has interests: str;
+    has skills: str;
+
+    can do with Root entry {
+        report brainstorm_ideas(self.interests, self.skills);
+    }
 }
 
-def:pub run_structure(raw_idea: str, interests: str, skills: str) -> HackathonPitch {
-    context = f"{raw_idea}\n\nBuilder background — interests: {interests}, skills: {skills}" if interests or skills else raw_idea;
-    return structure_pitch(context);
+walker:pub run_structure {
+    has raw_idea: str;
+    has interests: str;
+    has skills: str;
+
+    can do with Root entry {
+        context = f"{self.raw_idea}\n\nBuilder background — interests: {self.interests}, skills: {self.skills}" if self.interests or self.skills else self.raw_idea;
+        report structure_pitch(context);
+    }
 }
 
-def:pub run_research(idea: str, title: str, solution: str) -> str {
-    query = idea if idea else f"{title}: {solution}";
-    return research_idea(query);
+walker:pub run_research {
+    has idea: str;
+    has title: str;
+    has solution: str;
+
+    can do with Root entry {
+        query = self.idea if self.idea else f"{self.title}: {self.solution}";
+        report research_idea(query);
+    }
 }
 
-def:pub run_route(title: str, problem: str, solution: str, tech_stack: list, wow_factor: str, research: str) -> list {
-    # Build a rich context string so mentors give specific, not generic, advice
-    pitch = f"""Project: {title}
+walker:pub run_route {
+    has title: str;
+    has problem: str;
+    has solution: str;
+    has tech_stack: list;
+    has wow_factor: str;
+    has research: str;
 
-Problem: {problem}
+    can do with Root entry {
+        # Build a rich context string so mentors give specific, not generic, advice
+        pitch = f"""Project: {self.title}
 
-Solution: {solution}
+Problem: {self.problem}
 
-Tech stack: {", ".join(tech_stack)}
+Solution: {self.solution}
 
-Wow factor: {wow_factor}
+Tech stack: {", ".join(self.tech_stack)}
+
+Wow factor: {self.wow_factor}
 
 Research findings:
-{research}""";
-    advisor = root() spawn HackathonAdvisor(pitch=pitch);
-    return advisor.results;
+{self.research}""";
+        advisor = root() spawn HackathonAdvisor(pitch=pitch);
+        report advisor.results;
+    }
 }
 
 # ── Client entry ───────────────────────────────────────────────────────────────

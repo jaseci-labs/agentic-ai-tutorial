@@ -42,7 +42,8 @@ def:pub App() -> JsxElement {
         loading_step = 1;
         errors = {};
         try {
-            ideas = await run_brainstorm(interests, skills);
+            result = root() spawn run_brainstorm(interests=interests, skills=skills);
+            ideas = result.reports[0];
             raw_idea = ideas;           # pre-fill step 2 input
             completed = 1;
         } except Exception as e {
@@ -57,7 +58,8 @@ def:pub App() -> JsxElement {
         loading_step = 2;
         errors = {};
         try {
-            pitch = await run_structure(raw_idea, interests, skills);
+            result = root() spawn run_structure(raw_idea=raw_idea, interests=interests, skills=skills);
+            pitch = result.reports[0];
             # Pre-fill downstream steps from structured pitch
             research_query = str(pitch["title"] or "") + " — " + str(pitch["solution"] or "");
             pitch_summary = (
@@ -78,11 +80,12 @@ def:pub App() -> JsxElement {
         loading_step = 3;
         errors = {};
         try {
-            research = await run_research(
-                research_query,
-                str(pitch["title"] or ""),
-                str(pitch["solution"] or "")
+            result = root() spawn run_research(
+                idea=research_query,
+                title=str(pitch["title"] or ""),
+                solution=str(pitch["solution"] or "")
             );
+            research = result.reports[0];
             completed = 3;
         } except Exception as e {
             errors = {"3": str(e)};
@@ -96,14 +99,15 @@ def:pub App() -> JsxElement {
         loading_step = 4;
         errors = {};
         try {
-            mentor_results = await run_route(
-                str(pitch["title"] or ""),
-                str(pitch["problem"] or ""),
-                str(pitch["solution"] or ""),
-                pitch["tech_stack"] or [],
-                str(pitch["wow_factor"] or ""),
-                research
+            result = root() spawn run_route(
+                title=str(pitch["title"] or ""),
+                problem=str(pitch["problem"] or ""),
+                solution=str(pitch["solution"] or ""),
+                tech_stack=pitch["tech_stack"] or [],
+                wow_factor=str(pitch["wow_factor"] or ""),
+                research=research
             );
+            mentor_results = result.reports[0];
             completed = 4;
         } except Exception as e {
             errors = {"4": str(e)};
