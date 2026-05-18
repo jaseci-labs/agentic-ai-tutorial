@@ -72,7 +72,7 @@ body {
     font-size: 14px;
 }
 
-.primitives-bar {
+.patterns-bar {
     display: flex;
     gap: 8px;
     justify-content: center;

@@ -1,4 +1,4 @@
-"""Step 1: Generate — the `by llm()` primitive.
+"""Step 1: Generate — the `by llm()` pattern.
 The function signature (name + params + return type + docstring) IS the prompt.
 No function body needed — the LLM fills it in at runtime.
 

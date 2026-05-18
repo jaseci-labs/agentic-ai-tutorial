@@ -1,5 +1,5 @@
 """Shared tools for the Hackathon Pitch Builder agent.
-These are regular Jac functions the LLM can call via the Invoke primitive (Step 3).
+These are regular Jac functions the LLM can call via the Invoke pattern (Step 3).
 
 Jac pattern — tool functions are just normal functions:
     def my_tool(input: str) -> str { ... }          # regular function

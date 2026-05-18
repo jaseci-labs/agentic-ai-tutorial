@@ -1,12 +1,12 @@
 """Hackathon Pitch Builder — TUTORIAL TEMPLATE.
 
-The four mind/flow primitives (brainstorm_ideas, structure_pitch, research_idea,
+The four mind/flow patterns (brainstorm_ideas, structure_pitch, research_idea,
 HackathonAdvisor) are already wired up below. Your job is to expose each one as
 a `walker:pub` HTTP endpoint so the React frontend can call it.
 
 Look for the four `TODO` blocks at the bottom of the file. Each one tells you:
   • what `has` input fields the walker needs (matches what the frontend sends)
-  • which underlying primitive to call
+  • which underlying pattern to call
   • what to `report` back
 
 When all four walkers are filled in:
@@ -17,7 +17,7 @@ When all four walkers are filled in:
 import from tools { search_github, describe_tech_stack, estimate_build_time }
 import from jac_mcp.tools { search_docs, get_example, understand_jac_and_jaseci }
 
-# ── Mind primitives (Steps 1–3) ────────────────────────────────────────────────
+# ── Mind patterns (Steps 1–3) ────────────────────────────────────────────────
 
 def brainstorm_ideas(interests: str, skills: str) -> str by llm();
 sem brainstorm_ideas = "Brainstorm 3 creative hackathon project ideas based on the person's interests and skills. For each idea give it a catchy name and a one-sentence description. Make them fun, feasible in 24 hours, and genuinely useful.";
@@ -43,7 +43,7 @@ def research_idea(idea: str) -> str by llm(
 );
 sem research_idea = "Research a hackathon project idea: find similar open-source projects on GitHub, recommend the right tech stack, and give an honest estimate of whether it's buildable in 24-48 hours with a small team.";
 
-# ── Flow primitive (Route — Step 4) — expert mentor graph ─────────────────────
+# ── Flow pattern (Route — Step 4) — expert mentor graph ─────────────────────
 
 def advise_web(pitch: str) -> str by llm();
 def advise_mobile(pitch: str) -> str by llm();
@@ -166,7 +166,7 @@ walker HackathonAdvisor {
 # Each `walker:pub` below becomes a POST endpoint automatically when you run
 # `jac start app_tutorial.jac`. The frontend calls them via:
 #
-#     result = root() spawn walker_name(field=value, ...);
+#     result = root spawn walker_name(field=value, ...);
 #     value  = result.reports[0];
 #
 # Walker recipe:

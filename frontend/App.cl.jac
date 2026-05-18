@@ -120,8 +120,8 @@ def:pub App() -> JsxElement {
         <header className="header">
             <div className="header-eyebrow">JacHacks · Agentic AI Workshop</div>
             <h1>Hackathon Pitch Builder</h1>
-            <p>Build your project pitch with 4 agentic AI primitives</p>
-            <div className="primitives-bar">
+            <p>Build your project pitch with 4 agentic AI patterns</p>
+            <div className="patterns-bar">
                 <span className="prim-badge s1">1 · Generate</span>
                 <span className="prim-badge s2">2 · Extract</span>
                 <span className="prim-badge s3">3 · Invoke</span>

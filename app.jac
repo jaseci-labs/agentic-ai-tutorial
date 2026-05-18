@@ -8,7 +8,7 @@ Full app mode:      jac start app.jac
 import from tools { search_github, describe_tech_stack, estimate_build_time }
 import from jac_mcp.tools { search_docs, get_example, understand_jac_and_jaseci }
 
-# ── Mind primitives (Steps 1–3) ────────────────────────────────────────────────
+# ── Mind patterns (Steps 1–3) ────────────────────────────────────────────────
 
 def brainstorm_ideas(interests: str, skills: str) -> str by llm();
 sem brainstorm_ideas = "Brainstorm 3 creative hackathon project ideas based on the person's interests and skills. For each idea give it a catchy name and a one-sentence description. Make them fun, feasible in 24 hours, and genuinely useful.";
@@ -34,9 +34,9 @@ def research_idea(idea: str) -> str by llm(
 );
 sem research_idea = "Research a hackathon project idea: find similar open-source projects on GitHub, recommend the right tech stack, and give an honest estimate of whether it's buildable in 24-48 hours with a small team.";
 
-# ── Flow primitive (Route — Step 4) — expert mentor graph ─────────────────────
+# ── Flow pattern (Route — Step 4) — expert mentor graph ─────────────────────
 #
-# Combines two agentic primitives:
+# Combines two agentic patterns:
 #   Route  — `visit [-->] by llm()` reads node descriptions, picks the right experts
 #   Spawn  — each visited node launches a parallel AdviceWorker (flow spawn)
 #
@@ -151,7 +151,7 @@ walker HackathonAdvisor {
         jac ++> collect;
         # Route: LLM reads each node's `description`, visits the best matches.
         # Each visited node flow-spawns an AdviceWorker — all run in parallel.
-        visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch});
+        visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch, "instructions": "Only visit the mentors most relevant to the pitch"});
         visit collect;
     }
 

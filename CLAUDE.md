@@ -1,6 +1,6 @@
 # Jac Agentic Patterns Reference
 
-This file exists so AI coding assistants understand how Jac's agentic primitives work.
+This file exists so AI coding assistants understand how Jac's agentic patterns work.
 When you see Jac code in this project, use this guide to understand and extend it correctly.
 
 ---
@@ -21,7 +21,7 @@ def greet(name: str) -> str {
 
 ---
 
-## The 7 Agentic Primitives
+## The 7 Agentic Patterns
 
 ### 1. Generate — `by llm()`
 
