@@ -1,26 +1,54 @@
 """Hackathon Pitch Builder — TUTORIAL TEMPLATE.
 
-The four mind/flow patterns (brainstorm_ideas, structure_pitch, research_idea,
-HackathonAdvisor) are already wired up below. Your job is to expose each one as
-a `walker:pub` HTTP endpoint so the React frontend can call it.
+You'll build a working agentic AI app in 4 steps. Each step has two TODOs:
 
-Look for the four `TODO` blocks at the bottom of the file. Each one tells you:
-  • what `has` input fields the walker needs (matches what the frontend sends)
-  • which underlying pattern to call
-  • what to `report` back
+  (a) Functionality — declare the LLM-powered function(s) for the pattern
+  (b) Endpoint     — expose it as a `walker:pub` so the React frontend can call it
 
-When all four walkers are filled in:
+The supporting infrastructure (tool functions, mentor nodes, AdviceWorker) is
+already wired up. Look for the `TODO` markers below.
+
+When all TODOs are filled in:
     jac start app_tutorial.jac
     open http://localhost:8000
+
+Helpful patterns:
+    LLM call:   def fn(arg: T) -> R by llm();
+                sem fn = "instruction-style description of what the LLM should do";
+    Endpoint:   walker:pub Name {
+                    has field: type;
+                    can do with Root entry { report value; }
+                }
 """
 
 import from tools { search_github, describe_tech_stack, estimate_build_time }
 import from jac_mcp.tools { search_docs, get_example, understand_jac_and_jaseci }
 
-# ── Mind patterns (Steps 1–3) ────────────────────────────────────────────────
 
-def brainstorm_ideas(interests: str, skills: str) -> str by llm();
-sem brainstorm_ideas = "Brainstorm 3 creative hackathon project ideas based on the person's interests and skills. For each idea give it a catchy name and a one-sentence description. Make them fun, feasible in 24 hours, and genuinely useful.";
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 1 — Generate (free-form text from the LLM)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# TODO 1a — Functionality
+# Declare an LLM function `brainstorm_ideas(interests: str, skills: str) -> str`
+# using `by llm()`. Add a `sem brainstorm_ideas = "..."` instruction telling the
+# LLM to brainstorm 3 catchy, hackathon-feasible project ideas.
+#
+# def brainstorm_ideas(...) -> ... by llm();
+# sem brainstorm_ideas = "...";
+
+# TODO 1b — Endpoint
+# Frontend sends:  interests (str), skills (str)
+# You should:      call brainstorm_ideas(interests, skills) and `report` the result
+walker:pub run_brainstorm {
+    # has ...
+    # can do with Root entry { ... }
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 2 — Extract (typed object back from the LLM)
+# ══════════════════════════════════════════════════════════════════════════════
 
 enum Difficulty { BEGINNER, INTERMEDIATE, ADVANCED }
 enum Track { WEB, MOBILE, AI_ML, GAME, OTHER }
@@ -35,30 +63,72 @@ obj HackathonPitch {
     has track: Track;
 }
 
-def structure_pitch(raw_idea: str) -> HackathonPitch by llm();
-sem structure_pitch = "Turn a raw hackathon idea into a structured, compelling pitch with a title, problem statement, solution, tech stack, wow factor, difficulty, and track.";
+# TODO 2a — Functionality
+# Declare `structure_pitch(raw_idea: str) -> HackathonPitch by llm();`
+# Add a `sem` telling the LLM to turn raw idea text into a structured pitch.
+#
+# def structure_pitch(...) -> ... by llm();
+# sem structure_pitch = "...";
 
-def research_idea(idea: str) -> str by llm(
-    tools=[search_github, describe_tech_stack, estimate_build_time]
-);
-sem research_idea = "Research a hackathon project idea: find similar open-source projects on GitHub, recommend the right tech stack, and give an honest estimate of whether it's buildable in 24-48 hours with a small team.";
+# TODO 2b — Endpoint
+# Frontend sends:  raw_idea (str), interests (str), skills (str)
+# You should:      optionally append the builder background to raw_idea,
+#                  then call structure_pitch(...) and `report` the HackathonPitch
+walker:pub run_structure {
+    # has ...
+    # can do with Root entry { ... }
+}
 
-# ── Flow pattern (Route — Step 4) — expert mentor graph ─────────────────────
 
-def advise_web(pitch: str) -> str by llm();
-def advise_mobile(pitch: str) -> str by llm();
-def advise_aiml(pitch: str) -> str by llm();
-def advise_game(pitch: str) -> str by llm();
-def advise_jac(pitch: str) -> str by llm(
-    tools=[search_docs, get_example],
-    incl_info={"jaseci_knowledge": understand_jac_and_jaseci()}
-);
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 3 — Invoke (LLM calls tools in a ReAct loop)
+# ══════════════════════════════════════════════════════════════════════════════
 
-sem advise_web = "Give practical next-step advice for building this web app at a hackathon. Suggest concrete first tasks, tools, and APIs.";
-sem advise_mobile = "Give practical next-step advice for building this mobile app at a hackathon. Suggest concrete first tasks, frameworks, and libraries.";
-sem advise_aiml = "Give practical next-step advice for integrating AI/ML into this hackathon project. Suggest model APIs, embeddings, or pipelines to use.";
-sem advise_game = "Give practical next-step advice for building this game at a hackathon. Suggest engines, mechanics, and first implementation steps.";
-sem advise_jac = "Give practical next-step advice for building this project using Jac and Jaseci. Use the search_docs and get_example tools to pull relevant documentation and code examples.";
+# TODO 3a — Functionality
+# Declare `research_idea(idea: str) -> str by llm(tools=[...])` giving the LLM
+# access to the three tools imported above:
+#   search_github, describe_tech_stack, estimate_build_time
+# Add a `sem` explaining the goal: find similar projects, recommend a stack,
+# and estimate buildability in 24-48 hours.
+#
+# def research_idea(...) -> ... by llm(tools=[...]);
+# sem research_idea = "...";
+
+# TODO 3b — Endpoint
+# Frontend sends:  idea (str), title (str), solution (str)
+# You should:      build a query string (prefer `idea`, fall back to title+solution),
+#                  call research_idea(query), and `report` the result string
+walker:pub run_research {
+    # has ...
+    # can do with Root entry { ... }
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 4 — Route (walker visits LLM-chosen nodes; spawn workers in parallel)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# TODO 4a — Functionality: per-mentor advise functions
+# Declare 5 LLM functions, each taking `pitch: str` and returning `str`:
+#   advise_web, advise_mobile, advise_aiml, advise_game, advise_jac
+# advise_jac additionally uses tools=[search_docs, get_example] and
+# incl_info={"jaseci_knowledge": understand_jac_and_jaseci()}.
+# Add a `sem` to each one describing the mentor's specialty.
+#
+# def advise_web(pitch: str) -> str by llm();
+# def advise_mobile(pitch: str) -> str by llm();
+# def advise_aiml(pitch: str) -> str by llm();
+# def advise_game(pitch: str) -> str by llm();
+# def advise_jac(pitch: str) -> str by llm(tools=[...], incl_info={...});
+# sem advise_web    = "...";
+# sem advise_mobile = "...";
+# sem advise_aiml   = "...";
+# sem advise_game   = "...";
+# sem advise_jac    = "...";
+
+# ── Supporting infrastructure (already wired) ────────────────────────────────
+# AdviceWorker runs one mentor's advise_* function in parallel.
+# Each mentor node flow-spawns an AdviceWorker when visited.
 
 walker AdviceWorker {
     has pitch: str;
@@ -66,11 +136,12 @@ walker AdviceWorker {
     has advice: str = "";
 
     can work with Root entry {
-        if self.mentor == "Web Dev"    { self.advice = advise_web(self.pitch); }
-        elif self.mentor == "Mobile"   { self.advice = advise_mobile(self.pitch); }
-        elif self.mentor == "AI/ML"    { self.advice = advise_aiml(self.pitch); }
-        elif self.mentor == "Game Dev" { self.advice = advise_game(self.pitch); }
-        else                           { self.advice = advise_jac(self.pitch); }
+        # Uncomment once you've declared the advise_* functions in TODO 4a:
+        # if self.mentor == "Web Dev"    { self.advice = advise_web(self.pitch); }
+        # elif self.mentor == "Mobile"   { self.advice = advise_mobile(self.pitch); }
+        # elif self.mentor == "AI/ML"    { self.advice = advise_aiml(self.pitch); }
+        # elif self.mentor == "Game Dev" { self.advice = advise_game(self.pitch); }
+        # else                           { self.advice = advise_jac(self.pitch); }
     }
 }
 
@@ -126,6 +197,14 @@ node JacExpert {
 
 node CollectNode {}
 
+# TODO 4b — Functionality: HackathonAdvisor walker
+# Fill in the two abilities:
+#   `can route with Root entry` — create one node of each mentor type + a
+#     CollectNode, connect them all (here ++> mentor; mentor ++> collect),
+#     then `visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch});`
+#     and finally `visit collect;` to gather results.
+#   `can collect with CollectNode entry` — `wait` each task in self.tasks and
+#     append `{"mentor": ..., "advice": w.advice}` to self.results.
 walker HackathonAdvisor {
     has pitch: str;
     has tasks: list = [];
@@ -133,89 +212,28 @@ walker HackathonAdvisor {
     has results: list = [];
 
     can route with Root entry {
-        web  = WebDevMentor();
-        mob  = MobileMentor();
-        aiml = AIMLMentor();
-        game = GameDevMentor();
-        jac  = JacExpert();
-        collect = CollectNode();
-        here ++> web;
-        here ++> mob;
-        here ++> aiml;
-        here ++> game;
-        here ++> jac;
-        web ++> collect;
-        mob ++> collect;
-        aiml ++> collect;
-        game ++> collect;
-        jac ++> collect;
-        visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch});
-        visit collect;
+        # TODO 4b: build the mentor graph and visit [-->] by llm(...)
     }
 
     can collect with CollectNode entry {
-        for i in range(len(self.tasks)) {
-            w = wait self.tasks[i];
-            self.results = self.results + [{"mentor": self.mentors[i], "advice": w.advice}];
-        }
+        # TODO 4b: await each flow-spawned task and append to self.results
     }
 }
 
-# ── 🛠️  PUBLIC ENDPOINTS — YOUR TURN ──────────────────────────────────────────
-#
-# Each `walker:pub` below becomes a POST endpoint automatically when you run
-# `jac start app_tutorial.jac`. The frontend calls them via:
-#
-#     result = root spawn walker_name(field=value, ...);
-#     value  = result.reports[0];
-#
-# Walker recipe:
-#     walker:pub WalkerName {
-#         has field1: type;            # ← request body fields
-#         has field2: type;
-#         can do with Root entry {     # ← runs when client spawns it from root
-#             report some_value;       # ← becomes result.reports[0] on the client
-#         }
-#     }
-# ──────────────────────────────────────────────────────────────────────────────
-
-# TODO 1 — Step 1 (Generate): brainstorm ideas
-# Frontend sends:  interests (str), skills (str)
-# You should:     call `brainstorm_ideas(interests, skills)` and `report` the string
-walker:pub run_brainstorm {
-    # has ...
-    # can do with Root entry { ... }
-}
-
-# TODO 2 — Step 2 (Extract): turn raw idea text into a typed HackathonPitch
-# Frontend sends:  raw_idea (str), interests (str), skills (str)
-# You should:     optionally append the builder background to raw_idea,
-#                 call `structure_pitch(...)`, and `report` the HackathonPitch
-walker:pub run_structure {
-    # has ...
-    # can do with Root entry { ... }
-}
-
-# TODO 3 — Step 3 (Invoke): research the idea using tools
-# Frontend sends:  idea (str), title (str), solution (str)
-# You should:     build a query string (prefer `idea`, fall back to title+solution),
-#                 call `research_idea(query)`, and `report` the result string
-walker:pub run_research {
-    # has ...
-    # can do with Root entry { ... }
-}
-
-# TODO 4 — Step 4 (Route): spawn HackathonAdvisor and report mentor advice
+# TODO 4c — Endpoint
 # Frontend sends:  title, problem, solution, tech_stack (list), wow_factor, research
-# You should:     build a rich `pitch` string from those fields,
-#                 spawn `HackathonAdvisor(pitch=pitch)` from root,
-#                 and `report` the advisor's `results`
+# You should:      build a rich `pitch` string from those fields,
+#                  spawn HackathonAdvisor(pitch=pitch) from root,
+#                  and `report` advisor.results
 walker:pub run_route {
     # has ...
     # can do with Root entry { ... }
 }
 
-# ── Client entry ───────────────────────────────────────────────────────────────
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Client entry — already wired
+# ══════════════════════════════════════════════════════════════════════════════
 
 cl {
     import "./frontend/styles.css";
