@@ -5,14 +5,20 @@ Pure presentational component; App.cl.jac owns state and calls the server.
 
 import from "react-markdown" { default as ReactMarkdown }
 
-def:pub Step1(props: dict) -> JsxElement {
-    interests = props["interests"] or "";
-    skills    = props["skills"] or "";
-    ideas     = props["ideas"] or "";
-    loading   = props["loading"] or False;
-    error     = props["error"] or "";
-    is_done   = props["isDone"] or False;
-    is_locked = props["isLocked"] or False;
+def:pub Step1(
+    interests: str,
+    skills: str,
+    ideas: str,
+    loading: bool,
+    error: str,
+    isDone: bool,
+    isLocked: bool,
+    onInterestsChange: Callable[[ChangeEvent], None],
+    onSkillsChange: Callable[[ChangeEvent], None],
+    onSubmit: Callable[[], None]
+) -> JsxElement {
+    is_done   = isDone;
+    is_locked = isLocked;
 
     status_label = "done" if is_done else ("active" if not is_locked else "locked");
 
@@ -35,7 +41,7 @@ def:pub Step1(props: dict) -> JsxElement {
                     <input
                         type="text"
                         value={interests}
-                        onChange={props["onInterestsChange"]}
+                        onChange={onInterestsChange}
                         placeholder="music, social apps, helping students..."
                         disabled={is_done or loading}
                     />
@@ -45,7 +51,7 @@ def:pub Step1(props: dict) -> JsxElement {
                     <input
                         type="text"
                         value={skills}
-                        onChange={props["onSkillsChange"]}
+                        onChange={onSkillsChange}
                         placeholder="Python, some web dev..."
                         disabled={is_done or loading}
                     />
@@ -54,7 +60,7 @@ def:pub Step1(props: dict) -> JsxElement {
 
             {not is_done and <button
                 className="btn btn-primary"
-                onClick={props["onSubmit"]}
+                onClick={onSubmit}
                 disabled={loading or not interests or not skills}
             >
                 {loading and "Brainstorming..."  or "Brainstorm Ideas →"}

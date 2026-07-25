@@ -1,124 +1,102 @@
-# Agentic AI Tutorial: Building Agentic AI Systems with Jac
+# Hackathon Pitch Builder — Agentic AI with Jac
 
-Learn to build agentic AI systems using **Jac** — a language designed around the 7 primitives of agentic computation. By the end of this hands-on session you will have built a self-correcting, parallel research agent from scratch, one primitive at a time.
+A full-stack agentic app built with **Jac**, plus four standalone snippets that
+each demonstrate one agentic primitive on its own.
+
+The app takes a rough project idea and walks it through four LLM-driven stages:
+brainstorm ideas → structure a typed pitch → research it with tools → route it to
+the right expert mentors for advice.
 
 ---
 
 ## Repository Structure
 
 ```
-exercises/          <- You work here (skeletons with TODOs)
-solutions/          <- Reference solutions (peek if stuck)
-output/             <- Generated markdown files (created at runtime)
+app.jac             <- The app: server functions + client entry
+frontend/           <- Client components (.cl.jac) + styles.css
+tools.jac           <- Shared tools the LLM can call (GitHub search, etc.)
+
+step1_generate.jac  <- Standalone snippet: Generate
+step2_extract.jac   <- Standalone snippet: Extract
+step3_invoke.jac    <- Standalone snippet: Invoke
+step4_route.jac     <- Standalone snippet: Route + Spawn
+
+output/             <- Markdown written by the snippets (created at runtime)
 ```
-
----
-
-## What You Will Build
-
-**Mind primitives** — what the LLM does:
-
-| Step | Primitive | What it does |
-|------|-----------|--------------|
-| 1 | **Generate** | LLM returns free text from a function signature |
-| 2 | **Extract** | LLM returns structured, typed data — enforced by the compiler |
-| 3 | **Invoke** | LLM calls tools, observes results, and loops (ReAct cycle) |
-
-**Flow primitives** — how work moves:
-
-| Step | Primitive | What it does |
-|------|-----------|--------------|
-| 4 | **Pipe** | Chain operations sequentially |
-| 5 | **Route** | LLM picks a path from a graph of nodes |
-| 6 | **Loop** | Repeat until a typed quality check passes |
-| 7 | **Spawn** | Run multiple walkers in parallel and merge results |
-
-**Step 8** puts all 7 together into a single self-correcting parallel research agent.
 
 ---
 
 ## Setup
 
-### 1. Run the setup script
+Requires **Jac 0.34 or newer** (`jac --version`).
+
+### 1. Install the Jac binary
 
 ```bash
-source setup.sh
+curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh | bash -s -- --standalone
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-This will:
-- Install the Jac language runtime (standalone binary)
-- Add `jac` to your PATH
+### 2. Install project dependencies
 
-### 2. Set your API key
+```bash
+jac install
+```
 
-You will receive an OpenAI API key at the start of the tutorial. Export it in your terminal:
+Not optional: the LLM capability (litellm and friends) is declared by the
+`[byllm.model]` table in `jac.toml` and is only fetched by this step. Skipping it
+gives you `'litellm' is required for this feature` on the first `by llm()` call.
+
+### 3. Set your API key
 
 ```bash
 export OPENAI_API_KEY="your-key-here"
 ```
 
----
-
-## How to Work Through the Exercises
-
-Each exercise file has **TODO** markers where you write the key primitive. The boilerplate and types are provided.
-
-### 1. Open the exercise
+### 4. Check everything compiles
 
 ```bash
-# Work in the exercises/ directory
-cd exercises/
-```
-
-### 2. Fill in the TODOs
-
-Open `step1.jac` in your editor. Look for the `# TODO` comments — they tell you exactly what to write.
-
-### 3. Run your code
-
-```bash
-jac run step1.jac
-```
-
-### 4. View the output
-
-Each step writes a markdown file to `output/`. Open it to see your results formatted nicely:
-
-```bash
-# On macOS
-open output/step1_generate.md
-
-# Or just cat it
-cat output/step1_generate.md
-```
-
-### 5. If you get stuck
-
-The complete solution is in `solutions/`:
-
-```bash
-jac run ../solutions/step1_generate.jac
+jac check app.jac
 ```
 
 ---
 
-## Exercise Progression
+## Run the App
 
 ```bash
-# Mind primitives
-jac run step1.jac    # Generate: LLM returns free text
-jac run step2.jac    # Extract:  LLM returns typed data
-jac run step3.jac    # Invoke:   LLM calls tools (ReAct)
-
-# Flow primitives
-jac run step4.jac    # Pipe:     Sequential chaining
-jac run step5.jac    # Route:    LLM-directed graph traversal
-jac run step6.jac    # Loop:     Self-correction cycle
-jac run step7.jac    # Spawn:    Parallel walkers
-
-# Capstone
-jac run step8.jac    # All 7 primitives in one agent
+jac start app.jac
+# open http://localhost:8000
 ```
+
+Server functions in `app.jac` are exposed automatically as HTTP endpoints
+(`run_brainstorm`, `run_structure`, `run_research`, `run_route`); the client
+components in `frontend/` call them via `sv import`.
+
+---
+
+## The Four Snippets
+
+Each file runs on its own and writes its result to `output/`.
+
+```bash
+jac run step1_generate.jac   # Generate: LLM returns free text
+jac run step2_extract.jac    # Extract:  LLM returns a typed object
+jac run step3_invoke.jac     # Invoke:   LLM calls tools in a ReAct loop
+jac run step4_route.jac      # Route:    LLM picks expert nodes, spawns workers
+```
+
+| Snippet | Primitive | What it shows |
+|---------|-----------|---------------|
+| `step1_generate.jac` | **Generate** | A function signature becomes the prompt; `by llm()` supplies the body |
+| `step2_extract.jac` | **Extract** | A typed `obj` return with `enum` fields — the compiler enforces the schema |
+| `step3_invoke.jac` | **Invoke** | `by llm(tools=[...])` runs reason → call tool → observe → repeat |
+| `step4_route.jac` | **Route + Spawn** | `visit [-->] by llm()` picks expert nodes; each spawns a parallel worker |
+
+`step4_route.jac` also shows the two things that trip people up: `flow root spawn`
+returns a *future* (collect it with `(wait f) as Worker`), and `visit` is
+*deferred*, so results are gathered at a later collector node rather than inline.
+
+See `CLAUDE.md` for a syntax reference covering these primitives.
 
 ---
 

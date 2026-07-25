@@ -151,6 +151,35 @@ with entry {
 - The LLM reads node field values (like `description`) to decide.
 - `can <ability> with <NodeType> entry { ... }` fires when the walker arrives at that node type.
 - `visitor` inside a node ability refers to the visiting walker.
+- Each ability in one walker needs a **unique name** — you cannot have two
+  `can respond with ...` blocks in the same walker (`E0076: Duplicate method`).
+  Name them per node: `can route_web with WebNode entry`, etc.
+
+**`visit` is deferred — you cannot route and collect in the same ability.**
+Node abilities run only *after* the current ability body returns, so anything
+the visited nodes produce is not there yet:
+
+```jac
+can route with Root entry {
+    visit [-->] by llm(incl_info={"query": self.query});
+    for w in self.workers { ... }   # WRONG: self.workers is still empty here
+}
+```
+
+Queue a collector node last and gather results when the walker arrives there:
+
+```jac
+node CollectNode {}
+
+can route with Root entry {
+    visit [-->] by llm(incl_info={"query": self.query});
+    visit collect;                  # queued after the experts
+}
+
+can gather with CollectNode entry {
+    for f in self.workers { ... }   # now every expert has run
+}
+```
 
 ---
 
@@ -194,7 +223,7 @@ with entry {
 
 ### 7. Spawn — Parallel walkers
 
-Launch multiple walkers concurrently and wait for all to finish.
+Launch multiple walkers concurrently, then `wait` for them.
 
 ```jac
 walker ResearcherA {
@@ -216,20 +245,29 @@ walker ResearcherB {
 }
 
 with entry {
-    # flow spawn = launch without blocking; collect results after
-    a = root flow spawn ResearcherA(topic="topic A");
-    b = root flow spawn ResearcherB(topic="topic B");
+    # `flow root spawn` (in that order) launches without blocking and
+    # returns a FUTURE — not the walker.
+    ta = flow root spawn ResearcherA(topic="topic A");
+    tb = flow root spawn ResearcherB(topic="topic B");
 
-    # walkers run in parallel; access .findings after both complete
+    # Launch everything first, then wait. `wait` gives back the finished
+    # walker, but the checker sees it as Unknown — bind it with `as`.
+    a = (wait ta) as ResearcherA;
+    b = (wait tb) as ResearcherB;
+
     print(a.findings);
     print(b.findings);
 }
 ```
 
 **Rules:**
-- `flow spawn` launches asynchronously; `spawn` blocks until done.
-- Each walker has its own isolated state (`has` fields).
-- Collect results by reading walker fields after spawning.
+- The keyword order is `flow root spawn W(...)`, not `root flow spawn W(...)`.
+- `flow ... spawn` returns a future; `spawn` blocks and returns the walker.
+- Always `(wait f) as WalkerType` — without the cast you get
+  `E1032: Type is Unknown, cannot access attribute ...`.
+- Launch all, then wait all. A `wait` right after each `flow` runs them serially.
+- To `wait` a mixed list of walker types, give them a common base walker
+  (`walker HW(Researcher) { ... }`) and cast to that base.
 
 ---
 
@@ -240,8 +278,11 @@ with entry {
 | `root ++> NodeType()` | Create node and connect to root |
 | `a ++> b` | Connect node `a` to node `b` |
 | `[-->]` | All child nodes of current node |
-| `root spawn Walker(...)` | Launch walker from root (blocking) |
-| `root flow spawn Walker(...)` | Launch walker from root (non-blocking) |
+| `root spawn Walker(...)` | Launch walker from root (blocking, returns walker) |
+| `flow root spawn Walker(...)` | Launch walker from root (non-blocking, returns future) |
+| `(wait f) as Walker` | Block on a future and bind its walker type |
+
+Note: `root` is a bare keyword — `root()` is an error (`E0049`).
 
 ---
 
@@ -270,3 +311,13 @@ Always add `sem` to tool functions used in `by llm(tools=[...])`.
 | Forgetting `++>` to connect nodes | Connect all nodes to `root` before spawning walker |
 | Infinite Loop | Always cap with `for i in range(N)` |
 | Missing semicolons | Every statement ends with `;` |
+| `root()` | Bare `root` — it's a keyword, not a call (`E0049`) |
+| `root flow spawn W()` | `flow root spawn W()` — `flow` comes first |
+| `w = wait f; w.field` | `w = (wait f) as W;` — else `E1032` |
+| Two `can x with A entry` / `can x with B entry` | Give each ability a unique name (`E0076`) |
+| Collecting results after `visit` in the same ability | `visit` is deferred — collect in a later collector node |
+| `pass;` | Not supported (`E0010`) — leave the block empty |
+| `lambda e: object -> None { ... }` | `lambda (e: ChangeEvent) { ... }` — params are parenthesized and typed |
+| `lambda -> None { ... }` | `lambda { ... }` for a no-arg handler |
+| Client `props: dict` + `props["onX"]` | Named typed params: `onX: Callable[[ChangeEvent], None]` (`E1101`) |
+| `[plugins.byllm]` in jac.toml | Top-level `[byllm.model]` — `[plugins.*]` no longer parses |

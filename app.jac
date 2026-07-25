@@ -6,7 +6,6 @@ Full app mode:      jac start app.jac
 """
 
 import from tools { search_github, describe_tech_stack, estimate_build_time }
-import from jac_mcp.tools { search_docs, get_example, understand_jac_and_jaseci }
 
 # ── Mind primitives (Steps 1–3) ────────────────────────────────────────────────
 
@@ -47,16 +46,13 @@ def advise_web(pitch: str) -> str by llm();
 def advise_mobile(pitch: str) -> str by llm();
 def advise_aiml(pitch: str) -> str by llm();
 def advise_game(pitch: str) -> str by llm();
-def advise_jac(pitch: str) -> str by llm(
-    tools=[search_docs, get_example],
-    incl_info={"jaseci_knowledge": understand_jac_and_jaseci()}
-);
+def advise_jac(pitch: str) -> str by llm(tools=[search_github]);
 
 sem advise_web = "Give practical next-step advice for building this web app at a hackathon. Suggest concrete first tasks, tools, and APIs.";
 sem advise_mobile = "Give practical next-step advice for building this mobile app at a hackathon. Suggest concrete first tasks, frameworks, and libraries.";
 sem advise_aiml = "Give practical next-step advice for integrating AI/ML into this hackathon project. Suggest model APIs, embeddings, or pipelines to use.";
 sem advise_game = "Give practical next-step advice for building this game at a hackathon. Suggest engines, mechanics, and first implementation steps.";
-sem advise_jac = "Give practical next-step advice for building this project using Jac and Jaseci. Use the search_docs and get_example tools to pull relevant documentation and code examples.";
+sem advise_jac = "Give practical next-step advice for building this project using Jac and Jaseci. Use search_github to find relevant Jac/Jaseci example projects to point the builder at.";
 
 # Worker walker — runs concurrently, one per selected mentor
 walker AdviceWorker {
@@ -158,7 +154,7 @@ walker HackathonAdvisor {
     can collect with CollectNode entry {
         # All mentor visits done — await each parallel worker and collect results
         for i in range(len(self.tasks)) {
-            w = wait self.tasks[i];
+            w = (wait self.tasks[i]) as AdviceWorker;
             self.results = self.results + [{"mentor": self.mentors[i], "advice": w.advice}];
         }
     }
@@ -203,7 +199,7 @@ Wow factor: {wow_factor}
 
 Research findings:
 {research}""";
-    advisor = root() spawn HackathonAdvisor(pitch=pitch);
+    advisor = root spawn HackathonAdvisor(pitch=pitch);
     return {"results": advisor.results};
 }
 
