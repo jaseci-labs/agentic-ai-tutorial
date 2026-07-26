@@ -18,7 +18,7 @@ obj HackathonPitch {
     has track: Track;
 }
 
-def structure_pitch(raw_idea: str) -> HackathonPitch by llm();
+def:pub structure_pitch(raw_idea: str) -> HackathonPitch by llm();
 
 sem structure_pitch = "Turn a raw hackathon idea into a structured, compelling pitch with a title, problem statement, solution, tech stack, wow factor, difficulty, and track.";
 

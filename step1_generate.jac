@@ -5,7 +5,7 @@ No function body needed — the LLM fills it in at runtime.
 Run: jac run step1_generate.jac
 """
 
-def brainstorm_ideas(interests: str, skills: str) -> str by llm();
+def:pub brainstorm_ideas(interests: str, skills: str) -> str by llm();
 
 sem brainstorm_ideas = "Brainstorm 3 creative hackathon project ideas based on the person's interests and skills. For each idea give it a catchy name and a one-sentence description. Make them fun, feasible in 24 hours, and genuinely useful.";
 

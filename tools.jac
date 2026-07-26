@@ -34,8 +34,8 @@ def search_github(query: str, max_results: int = 3) -> str {
 }
 
 # ── LLM-delegated tools: no external API needed, LLM answers directly ─────────
-def describe_tech_stack(project_description: str) -> str by llm();
-def estimate_build_time(description: str, team_size: int = 2) -> str by llm();
+def:pub describe_tech_stack(project_description: str) -> str by llm();
+def:pub estimate_build_time(description: str, team_size: int = 2) -> str by llm();
 
 # ── Utility ────────────────────────────────────────────────────────────────────
 def save_md(filename: str, content: str) {

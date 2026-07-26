@@ -1,0 +1,546 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hackathon Pitch Builder — Agentic AI with Jac</title>
+<meta name="description" content="Four agentic AI primitives in Jac — Generate, Extract, Invoke and Route — plus a full-stack app you can run with one command.">
+<meta name="theme-color" content="#ff6b35">
+<meta property="og:title" content="Hackathon Pitch Builder — Agentic AI with Jac">
+<meta property="og:description" content="Four agentic AI primitives in Jac, plus a full-stack app you can run with one command.">
+<meta property="og:type" content="website">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#060607; --bg-2:#0d0e11; --surface:#121317; --surface-2:#171920;
+  --border:#23262e; --border-lit:#2f333d;
+  --text:#e6edf3; --dim:#8b949e; --faint:#6b7280;
+  --accent:#ff6b35; --accent-2:#f7931e; --accent-3:#e8442c; --accent-soft:#ffa657;
+  --k:#ff7b72; --fn:#d2a8ff; --str:#a5d6ff; --num:#79c0ff; --cmt:#7d8590; --ty:#56d364; --sp:#ffa198;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+}
+html{scroll-behavior:smooth;scroll-padding-top:5rem;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--accent-soft);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:var(--mono);font-size:.9em}
+.wrap{width:100%;max-width:980px;margin:0 auto;padding:0 24px}
+
+/* nav */
+nav{position:sticky;top:0;z-index:50;background:rgba(6,6,7,.82);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-in{display:flex;align-items:center;gap:24px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.brand:hover{text-decoration:none}
+.dot{width:10px;height:10px;border-radius:3px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-3));flex:none}
+.nav-links{margin-left:auto;display:flex;gap:22px;font-size:14px}
+.nav-links a{color:var(--dim)}
+.nav-links a:hover{color:var(--text);text-decoration:none}
+
+/* hero */
+header.hero{position:relative;padding:84px 0 64px;border-bottom:1px solid var(--border);overflow:hidden}
+header.hero::before{content:"";position:absolute;top:-45%;left:50%;transform:translateX(-50%);
+  width:900px;height:600px;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(255,107,53,.16),transparent 70%)}
+.hero-in{position:relative}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--accent-soft);
+  border:1px solid var(--border-lit);background:var(--surface);border-radius:999px;padding:5px 13px}
+h1{font-size:clamp(2.1rem,6vw,3.4rem);line-height:1.08;letter-spacing:-.03em;
+  margin:22px 0 0;font-weight:800}
+h1 .grad{background:linear-gradient(100deg,var(--accent-2),var(--accent),var(--accent-3));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:clamp(1rem,2.4vw,1.19rem);color:var(--dim);max-width:64ch;margin:20px 0 0}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.btn{display:inline-block;padding:11px 20px;border-radius:9px;font-size:14px;font-weight:600;
+  border:1px solid var(--border-lit);color:var(--text);background:var(--surface);transition:.15s}
+.btn:hover{text-decoration:none;border-color:var(--accent);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(100deg,var(--accent),var(--accent-3));
+  border-color:transparent;color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+
+/* generic section */
+section{padding:72px 0;border-bottom:1px solid var(--border)}
+.sec-head{margin-bottom:34px}
+h2{font-size:clamp(1.5rem,3.4vw,2rem);letter-spacing:-.02em;margin:0;font-weight:700}
+.sec-head p{color:var(--dim);margin:10px 0 0;max-width:68ch}
+h3{font-size:1.15rem;margin:0;font-weight:650;letter-spacing:-.01em}
+
+/* primitive cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.card{display:block;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:18px;transition:.15s;color:var(--text)}
+.card:hover{text-decoration:none;border-color:var(--accent);transform:translateY(-2px)}
+.card .num{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em}
+.card h4{margin:8px 0 6px;font-size:1.02rem;font-weight:650}
+.card p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.55}
+
+/* snippet blocks */
+.snippet{margin-top:56px}
+.snippet:first-of-type{margin-top:0}
+.snip-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.badge{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--bg);
+  background:linear-gradient(135deg,var(--accent-2),var(--accent));
+  border-radius:6px;padding:3px 8px;flex:none}
+.tag{font-family:var(--mono);font-size:12px;color:var(--accent-soft);
+  border:1px solid var(--border-lit);border-radius:999px;padding:2px 10px}
+.blurb{color:var(--dim);margin:0 0 18px;max-width:72ch}
+.blurb code,.takeaway code,.gotcha code{background:var(--surface-2);border:1px solid var(--border);
+  border-radius:5px;padding:1px 5px;color:var(--accent-soft);font-size:.86em}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.panel-bar{display:flex;align-items:center;gap:8px;padding:9px 14px;
+  background:var(--bg-2);border-bottom:1px solid var(--border)}
+.tl{display:flex;gap:6px}
+.tl i{width:10px;height:10px;border-radius:50%;background:var(--border-lit);display:block}
+.fname{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.copy{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim);cursor:pointer;
+  background:none;border:1px solid var(--border-lit);border-radius:6px;padding:3px 9px;transition:.15s}
+.copy:hover{color:var(--text);border-color:var(--accent)}
+.copy.done{color:var(--ty);border-color:var(--ty)}
+pre{margin:0;padding:18px;overflow-x:auto;font-family:var(--mono);
+  font-size:13px;line-height:1.68;tab-size:4}
+pre code{font-size:inherit}
+
+.run{display:flex;align-items:center;gap:10px;margin-top:14px;font-family:var(--mono);font-size:13px}
+.run .prompt{color:var(--accent)}
+.run .cmd{color:var(--text)}
+.out{margin-top:10px;background:var(--bg-2);border:1px solid var(--border);
+  border-left:2px solid var(--accent);border-radius:0 10px 10px 0}
+.out .lbl{font-family:var(--mono);font-size:11px;color:var(--faint);
+  letter-spacing:.08em;text-transform:uppercase;padding:9px 16px 0}
+.out pre{padding:8px 16px 16px;color:var(--dim);font-size:12.5px}
+.takeaway{margin-top:14px;font-size:14px;color:var(--dim);
+  border-left:2px solid var(--border-lit);padding-left:14px}
+.takeaway strong{color:var(--text);font-weight:600}
+
+/* syntax */
+.t-k{color:var(--k)}.t-fn{color:var(--fn)}.t-str{color:var(--str)}.t-num{color:var(--num)}
+.t-cmt{color:var(--cmt);font-style:italic}.t-ty{color:var(--ty)}.t-sp{color:var(--sp)}
+
+/* gotchas */
+.gotchas{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.gotcha{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 18px}
+.gotcha h4{margin:0 0 6px;font-size:14.5px;font-weight:650}
+.gotcha p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.6}
+
+/* app section */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
+.flow{list-style:none;padding:0;margin:0;counter-reset:f}
+.flow li{position:relative;padding:11px 0 11px 40px;border-bottom:1px dashed var(--border);
+  font-size:14.5px;color:var(--dim)}
+.flow li:last-child{border-bottom:0}
+.flow li::before{counter-increment:f;content:counter(f);position:absolute;left:0;top:11px;
+  width:24px;height:24px;border-radius:7px;display:grid;place-items:center;
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent);
+  background:var(--surface-2);border:1px solid var(--border-lit)}
+.flow strong{color:var(--text);font-weight:600}
+
+footer{padding:44px 0 60px;color:var(--faint);font-size:13.5px}
+.foot-links{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px}
+@media(max-width:640px){
+  .nav-links{gap:14px}.nav-links a:not(.gh){display:none}
+  section{padding:54px 0}header.hero{padding:56px 0 46px}
+}
+</style></head><body>
+<nav><div class="wrap nav-in">
+<a class="brand" href="#top"><span class="dot"></span>Pitch Builder</a>
+<div class="nav-links">
+<a href="#primitives">Primitives</a><a href="#snippets">Snippets</a>
+<a href="#app">App</a><a href="#gotchas">Jac&nbsp;0.34</a>
+<a class="gh" href="https://github.com/jaseci-labs/agentic-ai-tutorial">GitHub&nbsp;&rarr;</a>
+</div></div></nav>
+<header class="hero" id="top"><div class="wrap hero-in">
+<span class="eyebrow">Built with Jac</span>
+<h1>Agentic AI in four <span class="grad">primitives</span></h1>
+<p class="lede">A hackathon pitch builder that brainstorms ideas, structures them into a typed pitch, researches them with real tools, and routes them to the right expert mentors — each stage one small Jac construct. Read the four snippets, then run the whole thing as a full-stack app.</p>
+<div class="cta">
+<a class="btn primary" href="#snippets">Read the snippets</a>
+<a class="btn" href="https://github.com/jaseci-labs/agentic-ai-tutorial">View source</a>
+</div>
+<div class="panel" style="margin-top:34px"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div><span class="fname">quickstart</span><button class="copy" data-target="p-install">copy</button></div><pre id="p-install"><code>curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh | bash -s -- --standalone
+export PATH=&quot;$HOME/.local/bin:$PATH&quot;
+
+jac install                          # resolves the LLM capability into .jac/venv
+export OPENAI_API_KEY=&quot;your-key&quot;
+
+jac start app.jac                    # -&gt; http://localhost:8000</code></pre></div>
+</div></header>
+<section id="primitives"><div class="wrap">
+<div class="sec-head"><h2>The four primitives</h2><p>Each one is a single language construct. Together they cover most of what an agent needs to do.</p></div>
+<div class="cards">
+<a class="card" href="#s01">
+<div class="num">01</div>
+<h4>Generate</h4>
+<p><code>by llm()</code></p></a>
+<a class="card" href="#s02">
+<div class="num">02</div>
+<h4>Extract</h4>
+<p><code>typed return</code></p></a>
+<a class="card" href="#s03">
+<div class="num">03</div>
+<h4>Invoke</h4>
+<p><code>tools=[...]</code></p></a>
+<a class="card" href="#s04">
+<div class="num">04</div>
+<h4>Route + Spawn</h4>
+<p><code>visit [--&gt;] by llm()</code></p></a>
+</div></div></section>
+<section id="snippets"><div class="wrap">
+<div class="sec-head"><h2>Snippets</h2><p>Every file below runs on its own with <code>jac run</code> — no server, no UI, just the primitive. This is the exact source in the repo.</p></div>
+<div class="snippet" id="s01">
+<div class="snip-head"><span class="badge">01</span>
+<h3>Generate</h3><span class="tag">by llm()</span></div>
+<p class="blurb">Write a signature, skip the body. The function name, parameter names, return type and its <code>sem</code> description become the prompt.</p>
+<div class="panel"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div>
+<span class="fname">step1_generate.jac</span>
+<button class="copy" data-target="p-01">copy</button></div>
+<pre id="p-01"><code data-jac>&quot;&quot;&quot;Step 1: Generate — the `by llm()` pattern.
+The function signature (name + params + return type + docstring) IS the prompt.
+No function body needed — the LLM fills it in at runtime.
+
+Run: jac run step1_generate.jac
+&quot;&quot;&quot;
+
+def:pub brainstorm_ideas(interests: str, skills: str) -&gt; str by llm();
+
+sem brainstorm_ideas = &quot;Brainstorm 3 creative hackathon project ideas based on the person&#x27;s interests and skills. For each idea give it a catchy name and a one-sentence description. Make them fun, feasible in 24 hours, and genuinely useful.&quot;;
+
+with entry {
+    ideas = brainstorm_ideas(
+        interests=&quot;music, coffee, sustainability&quot;,
+        skills=&quot;Python, React&quot;
+    );
+    print(&quot;=== Step 1: Generate ===\n&quot;);
+    print(ideas);
+}</code></pre></div>
+<div class="run"><span class="prompt">$</span><span class="cmd">jac run step1_generate.jac</span></div>
+<div class="out"><div class="lbl">output</div><pre>1. **EcoTune**: An interactive platform that curates personalized music
+   playlists based on your coffee brewing process and sustainability goals.
+
+2. **BrewCycle**: A web app connecting local coffee shops with customers
+   looking to trade surplus coffee grounds for plants or compost.
+
+3. **Melody Mug**: A coffee mug that plays a soothing soundscape when
+   filled, encouraging mindful breaks while reducing waste.</pre></div>
+<div class="takeaway"><strong>Why it matters.</strong> No prompt string, no API client, no response parsing. The signature <em>is</em> the interface.</div>
+</div>
+<div class="snippet" id="s02">
+<div class="snip-head"><span class="badge">02</span>
+<h3>Extract</h3><span class="tag">typed return</span></div>
+<p class="blurb">Same as Generate, but the return type is a typed <code>obj</code>. The compiler enforces the schema, so the model cannot hand back malformed data.</p>
+<div class="panel"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div>
+<span class="fname">step2_extract.jac</span>
+<button class="copy" data-target="p-02">copy</button></div>
+<pre id="p-02"><code data-jac>&quot;&quot;&quot;Step 2: Extract — typed return from `by llm()`.
+Same as Generate, but returns a typed obj instead of str.
+The compiler enforces the schema — no JSON parsing, no &quot;parse and pray.&quot;
+
+Run: jac run step2_extract.jac
+&quot;&quot;&quot;
+
+enum Difficulty { BEGINNER, INTERMEDIATE, ADVANCED }
+enum Track { WEB, MOBILE, AI_ML, GAME, OTHER }
+
+obj HackathonPitch {
+    has title: str;
+    has problem: str;
+    has solution: str;
+    has tech_stack: list[str];
+    has wow_factor: str;
+    has difficulty: Difficulty;
+    has track: Track;
+}
+
+def:pub structure_pitch(raw_idea: str) -&gt; HackathonPitch by llm();
+
+sem structure_pitch = &quot;Turn a raw hackathon idea into a structured, compelling pitch with a title, problem statement, solution, tech stack, wow factor, difficulty, and track.&quot;;
+
+with entry {
+    pitch = structure_pitch(
+        &quot;An app that matches leftover restaurant food with nearby shelters in real time&quot;
+    );
+    print(&quot;=== Step 2: Extract ===\n&quot;);
+    print(f&quot;Title:       {pitch.title}&quot;);
+    print(f&quot;Problem:     {pitch.problem}&quot;);
+    print(f&quot;Solution:    {pitch.solution}&quot;);
+    print(f&quot;Tech stack:  {pitch.tech_stack}&quot;);
+    print(f&quot;Wow factor:  {pitch.wow_factor}&quot;);
+    print(f&quot;Difficulty:  {pitch.difficulty}&quot;);
+    print(f&quot;Track:       {pitch.track}&quot;);
+}</code></pre></div>
+<div class="run"><span class="prompt">$</span><span class="cmd">jac run step2_extract.jac</span></div>
+<div class="out"><div class="lbl">output</div><pre>Title:       Food Rescue Connect
+Problem:     Every day, restaurants throw away tons of edible food while
+             nearby shelters struggle to feed the hungry.
+Solution:    A mobile app that lets restaurants list leftover food in real
+             time, which nearby shelters can claim.
+Tech stack:  [&#x27;React Native&#x27;, &#x27;Node.js&#x27;, &#x27;Express&#x27;, &#x27;MongoDB&#x27;, &#x27;Google Maps API&#x27;]
+Difficulty:  Difficulty.INTERMEDIATE
+Track:       Track.MOBILE</pre></div>
+<div class="takeaway"><strong>Why it matters.</strong> <code>enum</code> fields make invalid values unrepresentable — <code>difficulty</code> can only ever be one of three values.</div>
+</div>
+<div class="snippet" id="s03">
+<div class="snip-head"><span class="badge">03</span>
+<h3>Invoke</h3><span class="tag">tools=[...]</span></div>
+<p class="blurb">Hand the model callable Jac functions. It runs a ReAct loop on its own: reason, call a tool, observe the result, repeat until it has enough.</p>
+<div class="panel"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div>
+<span class="fname">step3_invoke.jac</span>
+<button class="copy" data-target="p-03">copy</button></div>
+<pre id="p-03"><code data-jac>&quot;&quot;&quot;Step 3: Invoke — `by llm(tools=[...])`.
+Give the LLM callable functions. It runs a ReAct loop:
+reason → call tool → observe result → repeat until done.
+
+Run: jac run step3_invoke.jac
+&quot;&quot;&quot;
+
+import from tools { search_github, describe_tech_stack, estimate_build_time }
+
+def:pub research_idea(idea: str) -&gt; str by llm(
+    tools=[search_github, describe_tech_stack, estimate_build_time]
+);
+
+sem research_idea = &quot;Research a hackathon project idea thoroughly before answering. Use the tools to find real data.&quot;;
+
+with entry {
+    result = research_idea(
+        &quot;AI-powered accessibility tool that generates live captions for deaf users at events&quot;
+    );
+    print(&quot;=== Step 3: Invoke ===\n&quot;);
+    print(result);
+}</code></pre></div>
+<div class="run"><span class="prompt">$</span><span class="cmd">jac run step3_invoke.jac</span></div>
+<div class="out"><div class="lbl">output</div><pre>### Similar Open-Source Projects on GitHub
+  - live-caption/live-caption  — 2.1k stars
+  - openai/whisper             — 68k stars
+
+### Recommended Tech Stack
+  - Frontend: React + WebSockets for live caption streaming
+  - Backend:  Python (FastAPI), Whisper for speech-to-text
+
+### Estimated Build Time
+  - Duration: 24-36 hours with a team size of 4.</pre></div>
+<div class="takeaway"><strong>Why it matters.</strong> Tools are ordinary functions. <code>sem</code> tells the model <em>when</em> to reach for each one; it decides the order and when to stop.</div>
+</div>
+<div class="snippet" id="s04">
+<div class="snip-head"><span class="badge">04</span>
+<h3>Route + Spawn</h3><span class="tag">visit [--&gt;] by llm()</span></div>
+<p class="blurb">The graph <em>is</em> the routing table. The model reads each node's <code>description</code> and visits the ones that fit. Every selected node spawns a worker that runs in parallel.</p>
+<div class="panel"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div>
+<span class="fname">step4_route.jac</span>
+<button class="copy" data-target="p-04">copy</button></div>
+<pre id="p-04"><code data-jac>&quot;&quot;&quot;Step 4: Route + Spawn — `visit [--&gt;] by llm()` + `flow spawn` + `wait`.
+The LLM reads node descriptions and picks the best expert(s).
+Each selected node flow-spawns a parallel AdviceWorker.
+Walker collects all results by awaiting each with `wait`.
+
+No if/else chains. The graph topology IS the routing table.
+
+Run: jac run step4_route.jac
+&quot;&quot;&quot;
+
+# Worker walker — one per selected mentor, runs concurrently
+walker AdviceWorker {
+    has pitch: str;
+    has mentor: str;
+    has advice: str = &quot;&quot;;
+
+    can work with Root entry {
+        self.advice = get_advice(self.pitch, self.mentor);
+    }
+}
+
+def:pub get_advice(pitch: str, mentor: str) -&gt; str by llm();
+
+sem get_advice = &quot;Give practical next-step advice for building this hackathon project. Suggest 3-5 concrete first tasks.&quot;;
+
+# Expert nodes — LLM reads `description` to decide which ones to visit
+node WebDevMentor {
+    has description: str = &quot;Expert in web apps: React, APIs, databases, authentication, and full-stack deployment&quot;;
+
+    can respond with HackathonAdvisor entry {
+        t = flow root spawn AdviceWorker(pitch=visitor.pitch, mentor=&quot;Web Dev&quot;);
+        visitor.tasks = visitor.tasks + [t];
+        visitor.mentors = visitor.mentors + [&quot;Web Dev&quot;];
+    }
+}
+
+node MobileMentor {
+    has description: str = &quot;Expert in mobile apps: iOS, Android, React Native, Expo, and mobile UX&quot;;
+
+    can respond with HackathonAdvisor entry {
+        t = flow root spawn AdviceWorker(pitch=visitor.pitch, mentor=&quot;Mobile&quot;);
+        visitor.tasks = visitor.tasks + [t];
+        visitor.mentors = visitor.mentors + [&quot;Mobile&quot;];
+    }
+}
+
+node AIMLMentor {
+    has description: str = &quot;Expert in AI/ML: LLMs, embeddings, computer vision, and model APIs like OpenAI&quot;;
+
+    can respond with HackathonAdvisor entry {
+        t = flow root spawn AdviceWorker(pitch=visitor.pitch, mentor=&quot;AI/ML&quot;);
+        visitor.tasks = visitor.tasks + [t];
+        visitor.mentors = visitor.mentors + [&quot;AI/ML&quot;];
+    }
+}
+
+node GameDevMentor {
+    has description: str = &quot;Expert in game dev: Unity, Godot, Pygame, game design, and interactive experiences&quot;;
+
+    can respond with HackathonAdvisor entry {
+        t = flow root spawn AdviceWorker(pitch=visitor.pitch, mentor=&quot;Game Dev&quot;);
+        visitor.tasks = visitor.tasks + [t];
+        visitor.mentors = visitor.mentors + [&quot;Game Dev&quot;];
+    }
+}
+
+node CollectNode {}  # walker walks here after all mentor visits to await workers
+
+walker HackathonAdvisor {
+    has pitch: str;
+    has tasks: list = [];    # flow spawn handles (awaited with `wait`)
+    has mentors: list = [];  # parallel list: mentor name per task
+    has results: list = [];
+
+    can route with Root entry {
+        collect = CollectNode();
+        here ++&gt; WebDevMentor() ++&gt; collect;
+        here ++&gt; MobileMentor() ++&gt; collect;
+        here ++&gt; AIMLMentor() ++&gt; collect;
+        here ++&gt; GameDevMentor() ++&gt; collect;
+        # Route: LLM reads each node&#x27;s description, visits the best match(es).
+        # Each visited node flow-spawns an AdviceWorker — all run in parallel.
+        visit [--&gt;] by llm(incl_info={&quot;Hackathon pitch&quot;: self.pitch});
+        # `visit` is deferred, so results can&#x27;t be collected here — the walker
+        # arrives at CollectNode only after every selected mentor has run.
+        visit collect;
+    }
+
+    can collect with CollectNode entry {
+        # Await each parallel worker and collect results
+        for i in range(len(self.tasks)) {
+            w = (wait self.tasks[i]) as AdviceWorker;
+            self.results = self.results + [{&quot;mentor&quot;: self.mentors[i], &quot;advice&quot;: w.advice}];
+        }
+    }
+}
+
+with entry {
+    advisor = root spawn HackathonAdvisor(
+        pitch=&quot;A real-time multiplayer trivia game with AI-generated questions using WebSockets and React&quot;
+    );
+    print(&quot;=== Step 4: Route + Spawn ===\n&quot;);
+    for r in advisor.results {
+        print(f&quot;--- {r[&#x27;mentor&#x27;]} ---&quot;);
+        print(r[&quot;advice&quot;]);
+        print(&quot;&quot;);
+    }
+}</code></pre></div>
+<div class="run"><span class="prompt">$</span><span class="cmd">jac run step4_route.jac</span></div>
+<div class="out"><div class="lbl">output</div><pre>=== Step 4: Route + Spawn ===
+
+--- Web Dev ---
+1. Set up the project repository and initialize a React application.
+2. Research and integrate a WebSocket library (e.g. Socket.IO).
+...
+
+--- AI/ML ---
+1. Implement a basic AI model or API for generating trivia questions.
+...
+
+--- Game Dev ---
+1. Design the basic UI layout: questions, answer options, player scores.</pre></div>
+<div class="takeaway"><strong>Why it matters.</strong> No if/else dispatch. Add a mentor by adding a node — the routing logic never changes.</div>
+</div>
+</div></section>
+<section id="app"><div class="wrap">
+<div class="sec-head"><h2>The full app</h2><p>The same four primitives wired into a full-stack app — server logic in <code>app.jac</code>, React-style client components in <code>frontend/</code>. One language, one command.</p></div>
+<div class="panel"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div><span class="fname">run it</span></div><pre><code data-jac>jac start app.jac
+# -&gt; http://localhost:8000
+
+# walkers are exposed as HTTP endpoints automatically:
+#   POST /walker/run_brainstorm   {interests, skills}
+#   POST /walker/run_structure    {raw_idea, interests, skills}
+#   POST /walker/run_research     {idea, title, solution}
+#   POST /walker/run_route        {title, problem, solution, ...}</code></pre></div>
+<div class="two">
+<div class="gotcha"><h4>What the browser does</h4><ol class="flow"><li><strong>Generate</strong> — you enter interests and skills; the agent brainstorms three ideas.</li><li><strong>Extract</strong> — the idea you pick becomes a typed pitch with a tech stack and track.</li><li><strong>Invoke</strong> — the agent searches GitHub and estimates build time with real tools.</li><li><strong>Route</strong> — mentors are chosen by the model and answer in parallel.</li></ol></div>
+<div class="gotcha"><h4>How the client calls the server</h4><p>A client component imports server walkers directly and spawns them — the HTTP call, serialization and typing are generated for you.</p><pre style="padding:14px 0 0"><code data-jac>sv import from ...app { run_brainstorm }
+
+async def do_brainstorm() -&gt; None {
+    result = root spawn run_brainstorm(
+        interests=interests, skills=skills
+    );
+    ideas = result.reports[0];
+}</code></pre></div>
+</div></div></section>
+<section id="gotchas"><div class="wrap">
+<div class="sec-head"><h2>Jac 0.34 notes</h2><p>Things that changed, and the two that are easy to get wrong even once it compiles.</p></div>
+<div class="gotchas">
+<div class="gotcha"><h4><code>root</code> is a keyword, not a call</h4><p><code>root spawn W()</code> — <code>root()</code> was removed in 0.34 (<code>E0049</code>).</p></div>
+<div class="gotcha"><h4><code>flow</code> comes first</h4><p><code>flow root spawn W()</code>, not <code>root flow spawn W()</code>. It returns a <em>future</em>, not the walker.</p></div>
+<div class="gotcha"><h4>Bind the future with <code>as</code></h4><p><code>w = (wait f) as Worker;</code> — without the cast, attribute access fails with <code>E1032</code>.</p></div>
+<div class="gotcha"><h4><code>visit</code> is deferred</h4><p>Node abilities run <em>after</em> the current ability returns, so you cannot route and collect results in the same ability. Gather at a later collector node.</p></div>
+<div class="gotcha"><h4>One ability name per node type</h4><p>Two <code>can respond with ...</code> blocks in one walker collide (<code>E0076</code>). Name them per node.</p></div>
+<div class="gotcha"><h4><code>jac install</code> is required</h4><p>The <code>[byllm.model]</code> table in <code>jac.toml</code> declares the LLM capability; without this step the first <code>by llm()</code> call fails on a missing litellm.</p></div>
+</div></div></section>
+<footer><div class="wrap">
+<div class="foot-links"><a href="https://github.com/jaseci-labs/agentic-ai-tutorial">Repository</a><a href="https://jaclang.org">jaclang.org</a><a href="https://docs.jaseci.org">Documentation</a><a href="https://discord.gg/6j3QNdtcN6">Discord</a></div>
+<div>Built with Jac — one language, one compiler, the whole stack.</div>
+</div></footer>
+<script>
+// --- minimal Jac highlighter: one pass, each token classified exactly once ---
+var KW = ["walker","node","edge","obj","enum","class","def","can","with","entry","exit",
+  "has","sem","by","visit","spawn","report","disengage","skip","import","from","include",
+  "glob","impl","test","if","elif","else","for","in","while","return","break","continue",
+  "try","except","finally","raise","as","and","or","not","is","flow","wait","async","await","cl","sv","na"];
+var SPECIAL = ["root","here","visitor","self","super","llm","init","postinit"];
+var TYPES = ["str","int","float","bool","list","dict","set","tuple","any","None","True","False","JsxElement","Callable"];
+
+var Q3 = '"' + '"' + '"';                        // avoid a literal triple-quote in source
+var RE = new RegExp([
+  "(#[^\\n]*)",                                  // 1 comment
+  "(" + Q3 + "[\\s\\S]*?" + Q3 + ")",            // 2 triple string
+  "(f?\"(?:[^\"\\\\\\n]|\\\\.)*\")",             // 3 dq string
+  "(f?'(?:[^'\\\\\\n]|\\\\.)*')",                // 4 sq string
+  "\\b(\\d+\\.?\\d*)\\b",                        // 5 number
+  "\\b(" + KW.join("|") + ")\\b",                // 6 keyword
+  "\\b(" + SPECIAL.join("|") + ")\\b",           // 7 special
+  "\\b(" + TYPES.join("|") + ")\\b",             // 8 type
+  "\\b([A-Za-z_]\\w*)(?=\\s*\\()"                // 9 call
+].join("|"), "g");
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function hl(src){
+  var out = "", last = 0, m;
+  RE.lastIndex = 0;
+  while ((m = RE.exec(src)) !== null){
+    out += esc(src.slice(last, m.index));
+    var cls = m[1] ? "t-cmt" : (m[2]||m[3]||m[4]) ? "t-str" : m[5] ? "t-num"
+            : m[6] ? "t-k" : m[7] ? "t-sp" : m[8] ? "t-ty" : "t-fn";
+    out += '<span class="' + cls + '">' + esc(m[0]) + "</span>";
+    last = m.index + m[0].length;
+  }
+  return out + esc(src.slice(last));
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.querySelectorAll("code[data-jac]").forEach(function(el){
+    el.innerHTML = hl(el.textContent);
+  });
+  document.querySelectorAll(".copy").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var pre = document.getElementById(btn.dataset.target);
+      if(!pre) return;
+      navigator.clipboard.writeText(pre.textContent).then(function(){
+        var old = btn.textContent;
+        btn.textContent = "copied"; btn.classList.add("done");
+        setTimeout(function(){ btn.textContent = old; btn.classList.remove("done"); }, 1400);
+      }).catch(function(){});
+    });
+  });
+});
+</script></body></html>

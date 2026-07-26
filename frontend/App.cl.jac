@@ -137,9 +137,9 @@ def:pub App() -> JsxElement {
             error={errors["1"] or ""}
             isDone={completed >= 1}
             isLocked={False}
-            onInterestsChange={lambda e: object -> None { interests = e.target.value; }}
-            onSkillsChange={lambda e: object -> None { skills = e.target.value; }}
-            onSubmit={lambda -> None { do_brainstorm(); }}
+            onInterestsChange={lambda (e: ChangeEvent) { interests = e.target.value; }}
+            onSkillsChange={lambda (e: ChangeEvent) { skills = e.target.value; }}
+            onSubmit={lambda { do_brainstorm(); }}
         />
 
         <Step2
@@ -149,9 +149,9 @@ def:pub App() -> JsxElement {
             error={errors["2"] or ""}
             isDone={completed >= 2}
             isLocked={completed < 1}
-            onRawIdeaChange={lambda e: object -> None { raw_idea = e.target.value; }}
-            onSubmit={lambda -> None { do_structure(); }}
-            onCopyToStep3={lambda -> None {
+            onRawIdeaChange={lambda (e: ChangeEvent) { raw_idea = e.target.value; }}
+            onSubmit={lambda { do_structure(); }}
+            onCopyToStep3={lambda {
                 research_query = (pitch["title"] or "") + ": " + (pitch["solution"] or "") + ". " + (pitch["wow_factor"] or "");
             }}
         />
@@ -163,8 +163,8 @@ def:pub App() -> JsxElement {
             error={errors["3"] or ""}
             isDone={completed >= 3}
             isLocked={completed < 2}
-            onIdeaChange={lambda e: object -> None { research_query = e.target.value; }}
-            onSubmit={lambda -> None { do_research(); }}
+            onIdeaChange={lambda (e: ChangeEvent) { research_query = e.target.value; }}
+            onSubmit={lambda { do_research(); }}
         />
 
         <Step4
@@ -174,7 +174,7 @@ def:pub App() -> JsxElement {
             error={errors["4"] or ""}
             isDone={completed >= 4}
             isLocked={completed < 2}
-            onSubmit={lambda -> None { do_route(); }}
+            onSubmit={lambda { do_route(); }}
         />
 
         <div className="footer-note">
