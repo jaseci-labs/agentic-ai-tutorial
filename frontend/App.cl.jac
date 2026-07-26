@@ -12,8 +12,12 @@ import from Step1 { Step1 }
 import from Step2 { Step2 }
 import from Step3 { Step3 }
 import from Step4 { Step4 }
+import from AgentChat { AgentChat }
 
 def:pub App() -> JsxElement {
+    # "build" = the four guided steps; "agent" = the streaming chat agent
+    has tab: str = "build";
+
     # ── Step 1 state ─────────────────────────────────────────────────────────
     has interests: str = "";
     has skills: str = "";
@@ -129,6 +133,23 @@ def:pub App() -> JsxElement {
             </div>
         </header>
 
+        <nav className="tabs">
+            <button className={"tab " + ("on" if tab == "build" else "")}
+                    onClick={lambda { tab = "build"; }}>
+                Guided build
+            </button>
+            <button className={"tab " + ("on" if tab == "agent" else "")}
+                    onClick={lambda { tab = "agent"; }}>
+                Agent chat
+                <span className="tab-badge">streaming</span>
+            </button>
+        </nav>
+
+        {if tab == "agent" {
+            <AgentChat />
+        }}
+
+        {if tab == "build" {
         <Step1
             interests={interests}
             skills={skills}
@@ -176,6 +197,8 @@ def:pub App() -> JsxElement {
             isLocked={completed < 2}
             onSubmit={lambda { do_route(); }}
         />
+
+        }}
 
         <div className="footer-note">
             Built with Jac · jachacks.org

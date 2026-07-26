@@ -6,6 +6,9 @@ Full app mode:      jac start app.jac
 """
 
 import from tools { search_github, describe_tech_stack, estimate_build_time }
+# Streaming endpoints have no client RPC stub, so the entry module must import
+# them or the fetch 404s.
+import from agent { agent_chat_stream, agent_architecture, agent_history, agent_reset }
 
 # ── Mind patterns (Steps 1–3) ────────────────────────────────────────────────
 
