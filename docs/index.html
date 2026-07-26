@@ -85,7 +85,7 @@ h3{font-size:1.15rem;margin:0;font-weight:650;letter-spacing:-.01em}
 .tag{font-family:var(--mono);font-size:12px;color:var(--accent-soft);
   border:1px solid var(--border-lit);border-radius:999px;padding:2px 10px}
 .blurb{color:var(--dim);margin:0 0 18px;max-width:72ch}
-.blurb code,.takeaway code,.gotcha code{background:var(--surface-2);border:1px solid var(--border);
+.blurb code,.takeaway code,.box code{background:var(--surface-2);border:1px solid var(--border);
   border-radius:5px;padding:1px 5px;color:var(--accent-soft);font-size:.86em}
 
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
@@ -118,11 +118,10 @@ pre code{font-size:inherit}
 .t-k{color:var(--k)}.t-fn{color:var(--fn)}.t-str{color:var(--str)}.t-num{color:var(--num)}
 .t-cmt{color:var(--cmt);font-style:italic}.t-ty{color:var(--ty)}.t-sp{color:var(--sp)}
 
-/* gotchas */
-.gotchas{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-.gotcha{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 18px}
-.gotcha h4{margin:0 0 6px;font-size:14.5px;font-weight:650}
-.gotcha p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.6}
+/* info boxes */
+.box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 18px}
+.box h4{margin:0 0 6px;font-size:14.5px;font-weight:650}
+.box p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.6}
 
 /* app section */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
@@ -148,7 +147,7 @@ footer{padding:44px 0 60px;color:var(--faint);font-size:13.5px}
 <a class="brand" href="#top"><span class="dot"></span>Pitch Builder</a>
 <div class="nav-links">
 <a href="#primitives">Primitives</a><a href="#snippets">Snippets</a>
-<a href="#app">App</a><a href="#gotchas">Jac&nbsp;0.34</a>
+<a href="#app">App</a>
 <a class="gh" href="https://github.com/jaseci-labs/agentic-ai-tutorial">GitHub&nbsp;&rarr;</a>
 </div></div></nav>
 <header class="hero" id="top"><div class="wrap hero-in">
@@ -466,8 +465,8 @@ with entry {
 #   POST /walker/run_research     {idea, title, solution}
 #   POST /walker/run_route        {title, problem, solution, ...}</code></pre></div>
 <div class="two">
-<div class="gotcha"><h4>What the browser does</h4><ol class="flow"><li><strong>Generate</strong> — you enter interests and skills; the agent brainstorms three ideas.</li><li><strong>Extract</strong> — the idea you pick becomes a typed pitch with a tech stack and track.</li><li><strong>Invoke</strong> — the agent searches GitHub and estimates build time with real tools.</li><li><strong>Route</strong> — mentors are chosen by the model and answer in parallel.</li></ol></div>
-<div class="gotcha"><h4>How the client calls the server</h4><p>A client component imports server walkers directly and spawns them — the HTTP call, serialization and typing are generated for you.</p><pre style="padding:14px 0 0"><code data-jac>sv import from ...app { run_brainstorm }
+<div class="box"><h4>What the browser does</h4><ol class="flow"><li><strong>Generate</strong> — you enter interests and skills; the agent brainstorms three ideas.</li><li><strong>Extract</strong> — the idea you pick becomes a typed pitch with a tech stack and track.</li><li><strong>Invoke</strong> — the agent searches GitHub and estimates build time with real tools.</li><li><strong>Route</strong> — mentors are chosen by the model and answer in parallel.</li></ol></div>
+<div class="box"><h4>How the client calls the server</h4><p>A client component imports server walkers directly and spawns them — the HTTP call, serialization and typing are generated for you.</p><pre style="padding:14px 0 0"><code data-jac>sv import from ...app { run_brainstorm }
 
 async def do_brainstorm() -&gt; None {
     result = root spawn run_brainstorm(
@@ -475,16 +474,6 @@ async def do_brainstorm() -&gt; None {
     );
     ideas = result.reports[0];
 }</code></pre></div>
-</div></div></section>
-<section id="gotchas"><div class="wrap">
-<div class="sec-head"><h2>Jac 0.34 notes</h2><p>Things that changed, and the two that are easy to get wrong even once it compiles.</p></div>
-<div class="gotchas">
-<div class="gotcha"><h4><code>root</code> is a keyword, not a call</h4><p><code>root spawn W()</code> — <code>root()</code> was removed in 0.34 (<code>E0049</code>).</p></div>
-<div class="gotcha"><h4><code>flow</code> comes first</h4><p><code>flow root spawn W()</code>, not <code>root flow spawn W()</code>. It returns a <em>future</em>, not the walker.</p></div>
-<div class="gotcha"><h4>Bind the future with <code>as</code></h4><p><code>w = (wait f) as Worker;</code> — without the cast, attribute access fails with <code>E1032</code>.</p></div>
-<div class="gotcha"><h4><code>visit</code> is deferred</h4><p>Node abilities run <em>after</em> the current ability returns, so you cannot route and collect results in the same ability. Gather at a later collector node.</p></div>
-<div class="gotcha"><h4>One ability name per node type</h4><p>Two <code>can respond with ...</code> blocks in one walker collide (<code>E0076</code>). Name them per node.</p></div>
-<div class="gotcha"><h4><code>jac install</code> is required</h4><p>The <code>[byllm.model]</code> table in <code>jac.toml</code> declares the LLM capability; without this step the first <code>by llm()</code> call fails on a missing litellm.</p></div>
 </div></div></section>
 <footer><div class="wrap">
 <div class="foot-links"><a href="https://github.com/jaseci-labs/agentic-ai-tutorial">Repository</a><a href="https://jaclang.org">jaclang.org</a><a href="https://docs.jaseci.org">Documentation</a><a href="https://discord.gg/6j3QNdtcN6">Discord</a></div>
