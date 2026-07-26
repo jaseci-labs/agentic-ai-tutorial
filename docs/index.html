@@ -119,6 +119,7 @@ pre code{font-size:inherit}
 .t-cmt{color:var(--cmt);font-style:italic}.t-ty{color:var(--ty)}.t-sp{color:var(--sp)}
 
 /* info boxes */
+.boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
 .box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 18px}
 .box h4{margin:0 0 6px;font-size:14.5px;font-weight:650}
 .box p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.6}
@@ -147,7 +148,7 @@ footer{padding:44px 0 60px;color:var(--faint);font-size:13.5px}
 <a class="brand" href="#top"><span class="dot"></span>Pitch Builder</a>
 <div class="nav-links">
 <a href="#primitives">Primitives</a><a href="#snippets">Snippets</a>
-<a href="#app">App</a>
+<a href="#app">App</a><a href="#agent">Agent</a>
 <a class="gh" href="https://github.com/jaseci-labs/agentic-ai-tutorial">GitHub&nbsp;&rarr;</a>
 </div></div></nav>
 <header class="hero" id="top"><div class="wrap hero-in">
@@ -475,6 +476,45 @@ async def do_brainstorm() -&gt; None {
     ideas = result.reports[0];
 }</code></pre></div>
 </div></div></section>
+<section id="agent"><div class="wrap">
+<div class="sec-head"><h2>The agent</h2><p>The four patterns compose into one streaming chat agent. It is not a tool-loop: the agent is a <strong>graph</strong>, and the walker's position in it is the agent's state. The UI draws that same graph and lights up whichever node is running.</p></div>
+<div class="panel"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div><span class="fname">the pipeline</span></div><pre><code>Perceive ──&gt; Plan ──&gt; Act ──&gt; Synthesize
+                       │
+                       ├── Brainstorm   (Generate)
+                       ├── Structure    (Extract)
+                       ├── Research     (Invoke — tools/ReAct)
+                       └── Mentors      (Route + Spawn)</code></pre></div>
+<div class="boxes" style="margin-top:22px">
+<div class="box"><h4>The graph is the architecture</h4><p>Topology is data under <code>root</code>. <code>agent_architecture()</code> reads that same graph back, so the diagram in the UI is derived from the running system and cannot drift from it.</p></div>
+<div class="box"><h4>Behaviour lives on nodes</h4><p>Each capability implements its own <code>can ... with CapabilityExec entry</code>. Adding a capability means adding a node, not editing a dispatch chain.</p></div>
+<div class="box"><h4>Typed contracts between stages</h4><p>Perceive returns an <code>Intent</code>, Plan returns a <code>Plan</code> — <code>obj</code>s the compiler enforces, not free text the next stage has to re-parse.</p></div>
+<div class="box"><h4>The plan directs the route</h4><p>Small talk runs <em>zero</em> capabilities; a full pitch request runs four. Nothing is hardcoded.</p></div>
+<div class="box"><h4>Cognition is separate from transport</h4><p>Stages know nothing about HTTP. <code>agent_chat_stream</code> is a thin SSE adapter — swap it for a CLI and nothing changes.</p></div>
+<div class="box"><h4>The agent narrates itself</h4><p>Stages, capabilities and individual tool calls publish to one event bus, so the trace the UI draws <em>is</em> the execution path. Capabilities run on a worker thread while the endpoint drains that bus, which is why a tool call shows up the moment it happens.</p></div>
+</div>
+<div class="panel" style="margin-top:22px"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div><span class="fname">agent.jac — a capability is a node with an ability</span></div><pre><code data-jac>walker CapabilityExec {
+    has ctx: RunCtx;
+    has summary: str = &quot;&quot;;
+
+    can research with CapabilityNode entry {
+        if here.key != &quot;research&quot; { return; }
+        out = do_research(subject_of(self.ctx));
+        self.ctx.findings += [&quot;Research:&quot; + out];
+        self.summary = &quot;github + stack + feasibility&quot;;
+    }
+}
+
+# The endpoint walks the graph and turns what happens into SSE frames.
+def:pub agent_chat_stream(message: str) -&gt; Generator {
+    def stream -&gt; Generator[str, None, None] {
+        # ... for each stage: yield status, run it, yield what it found
+        for tok in compose(message, ctx.history, findings) {
+            yield json.dumps({&quot;t&quot;: &quot;token&quot;, &quot;v&quot;: str(tok)});
+        }
+    }
+    report stream();
+}</code></pre></div>
+</div></section>
 <footer><div class="wrap">
 <div class="foot-links"><a href="https://github.com/jaseci-labs/agentic-ai-tutorial">Repository</a><a href="https://jaclang.org">jaclang.org</a><a href="https://docs.jaseci.org">Documentation</a><a href="https://discord.gg/6j3QNdtcN6">Discord</a></div>
 <div>Built with Jac — one language, one compiler, the whole stack.</div>

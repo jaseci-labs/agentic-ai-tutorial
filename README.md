@@ -21,6 +21,8 @@ We build it in 4 steps, one pattern per step:
 | 3 | **Invoke** — `by llm(tools=[...])` with ReAct tool calling | [step3_invoke.jac](step3_invoke.jac) |
 | 4 | **Route** — walker visits LLM-chosen nodes in parallel | [step4_route.jac](step4_route.jac) |
 
+Then all four compose into a streaming chat agent — [agent.jac](agent.jac).
+
 ---
 
 ## Setup
@@ -66,12 +68,53 @@ jac run step4_route.jac
 
 ## Run the App
 
-All 4 patterns wired together in the browser — each step unlocks when the previous one completes.
-
 ```bash
 jac start app.jac
 # open http://localhost:8000
 ```
+
+Two tabs:
+
+- **Guided build** — the 4 patterns as a step-by-step form; each step unlocks when the previous one completes.
+- **Agent chat** — all 4 composed into one streaming agent, with the agent's own architecture drawn beside the conversation.
+
+---
+
+## The Agent — `agent.jac`
+
+The chat tab is not a tool-loop. The agent is a **graph**, and the walker's
+position in it is the agent's state:
+
+```
+Perceive ──> Plan ──> Act ──> Synthesize
+                       │
+                       ├── Brainstorm   (Generate)
+                       ├── Structure    (Extract)
+                       ├── Research     (Invoke — tools/ReAct)
+                       └── Mentors      (Route + Spawn)
+```
+
+What makes it worth copying rather than just wiring tools onto a loop:
+
+- **The graph is the architecture.** Topology is data under `root`.
+  `agent_architecture()` reads that same graph back, so the diagram in the UI is
+  derived from the running system and cannot drift from it.
+- **Behaviour lives on nodes.** Each capability implements its own
+  `can ... with CapabilityExec entry`. Adding a capability means adding a node,
+  not editing a dispatch chain.
+- **Typed contracts between stages.** Perceive returns an `Intent`, Plan returns
+  a `Plan` — `obj`s the compiler enforces, not free text the next stage re-parses.
+- **The plan directs the route.** Small talk runs *zero* capabilities; a full
+  pitch request runs four. Nothing is hardcoded.
+- **Cognition is separate from transport.** Stages know nothing about HTTP;
+  `agent_chat_stream` is a thin SSE adapter. Swap it for a CLI and nothing changes.
+- **The agent narrates itself.** Stages, capabilities and individual tool calls
+  publish to one event bus, so the trace the UI draws *is* the execution path.
+  Capabilities run on a worker thread while the endpoint drains that bus — which
+  is why a tool call appears the moment it happens, not after the step finishes.
+
+Streaming is real SSE: `def:pub ... -> Generator` with `report stream()`, and the
+final answer streams token by token via `by llm(stream=True)`.
 
 **Frontend files:**
 ```
