@@ -7,7 +7,7 @@ Run: jac run step3_invoke.jac
 
 import from tools { search_github, describe_tech_stack, estimate_build_time }
 
-def research_idea(idea: str) -> str by llm(
+def:pub research_idea(idea: str) -> str by llm(
     tools=[search_github, describe_tech_stack, estimate_build_time]
 );
 

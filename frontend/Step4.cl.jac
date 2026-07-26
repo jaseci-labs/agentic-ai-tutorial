@@ -6,15 +6,20 @@ routing table. Add a new node to add a new route.
 
 import from "react-markdown" { default as ReactMarkdown }
 
-def:pub Step4(props: dict) -> JsxElement {
-    pitch          = props["pitch"] or "";
-    mentor_results = props["mentorResults"] or [];
-    loading        = props["loading"] or False;
-    error          = props["error"] or "";
-    is_done        = props["isDone"] or False;
-    is_locked      = props["isLocked"] or False;
-
+def:pub Step4(
+    pitch: str,
+    mentorResults: list,
+    loading: bool,
+    error: str,
+    isDone: bool,
+    isLocked: bool,
+    onSubmit: Callable[[], None]
+) -> JsxElement {
     has active_tab: int = 0;
+
+    mentor_results = mentorResults;
+    is_done        = isDone;
+    is_locked      = isLocked;
 
     status_label = "done" if is_done else ("active" if not is_locked else "locked");
 
@@ -68,7 +73,7 @@ def:pub Step4(props: dict) -> JsxElement {
 
                 <button
                     className="btn btn-primary s4"
-                    onClick={props["onSubmit"]}
+                    onClick={onSubmit}
                     disabled={loading or not pitch}
                 >
                     {"Get Mentor Advice →"}
@@ -102,15 +107,15 @@ def:pub Step4(props: dict) -> JsxElement {
                     {[
                         <button
                             key={i}
-                            onClick={lambda -> None { active_tab = i; }}
+                            onClick={lambda { active_tab = i; }}
                             style={{
                                 "padding": "8px 14px",
                                 "fontSize": "12px",
                                 "fontWeight": "600",
                                 "border": "none",
-                                "borderBottom": ("2px solid " + mentor_color(mentor_results[i]["mentor"] or "")) if active_tab == i else "2px solid transparent",
+                                "borderBottom": ("2px solid " + mentor_color(str(mentor_results[i]["mentor"] or ""))) if active_tab == i else "2px solid transparent",
                                 "background": "transparent",
-                                "color": mentor_color(mentor_results[i]["mentor"] or "") if active_tab == i else "var(--text-dim)",
+                                "color": mentor_color(str(mentor_results[i]["mentor"] or "")) if active_tab == i else "var(--text-dim)",
                                 "cursor": "pointer",
                                 "transition": "all 0.15s",
                                 "whiteSpace": "nowrap",

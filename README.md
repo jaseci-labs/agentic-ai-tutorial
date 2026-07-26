@@ -2,6 +2,8 @@
 
 Learn the 4 core patterns of agentic AI — and build a working **Hackathon Pitch Builder** agent along the way.
 
+📖 **[Browse the snippets online →](https://jaseci-labs.github.io/agentic-ai-tutorial/)**
+
 > This repo also doubles as a **reference for AI coding assistants** working on Jac projects. See [CLAUDE.md](CLAUDE.md) for the full patterns guide.
 
 ---
@@ -23,12 +25,28 @@ We build it in 4 steps, one pattern per step:
 
 ## Setup
 
-```bash
-# 1. Install the Jac runtime
-pip install jaseci
+Requires **Jac 0.34 or newer** (`jac --version`).
 
-# 2. Set your OpenAI API key (you'll get one at the start of the session)
+```bash
+# 1. Install the Jac runtime (standalone binary)
+curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh | bash -s -- --standalone
+export PATH="$HOME/.local/bin:$PATH"
+
+# 2. Install project dependencies
+jac install
+
+# 3. Set your OpenAI API key (you'll get one at the start of the session)
 export OPENAI_API_KEY="your-key-here"
+```
+
+`jac install` is not optional. The LLM capability (litellm and friends) is declared
+by the `[byllm.model]` table in `jac.toml` and is only fetched by that step — skip it
+and the first `by llm()` call fails with `'litellm' is required for this feature`.
+
+Check everything compiles:
+
+```bash
+jac check app.jac
 ```
 
 ---
@@ -46,41 +64,14 @@ jac run step4_route.jac
 
 ---
 
-## Build It Yourself: `app_tutorial.jac`
+## Run the App
 
-[app_tutorial.jac](app_tutorial.jac) is the full app scaffold with the four HTTP endpoints stubbed as `TODO` placeholders. Each one is a `walker:pub` — Jac auto-generates the REST endpoint when you run `jac start`.
-
-Your job: fill in the four walkers so the React frontend can call them.
-
-```jac
-walker:pub run_brainstorm {
-    # has interests: str;
-    # has skills: str;
-    # can do with Root entry {
-    #     report brainstorm_ideas(self.interests, self.skills);
-    # }
-}
-```
-
-Each TODO comment tells you which fields the frontend sends, which pattern to call, and what to `report`. When all four are filled in:
-
-```bash
-jac start app_tutorial.jac
-# open http://localhost:8000
-```
-
----
-
-## Run the Finished App
-
-The completed version is in [app.jac](app.jac):
+All 4 patterns wired together in the browser — each step unlocks when the previous one completes.
 
 ```bash
 jac start app.jac
 # open http://localhost:8000
 ```
-
-All 4 steps wired together in the browser — each step unlocks when the previous one completes.
 
 **Frontend files:**
 ```
@@ -93,12 +84,31 @@ frontend/
 └── styles.css     ← dark hackathon theme
 ```
 
-The frontend calls each walker with:
+Server walkers in `app.jac` become HTTP endpoints automatically. The client
+imports them and spawns them directly:
 
 ```jac
+sv import from ...app { run_brainstorm }
+
 result = root spawn run_brainstorm(interests=interests, skills=skills);
 ideas  = result.reports[0];
 ```
+
+---
+
+## Jac 0.34 Notes
+
+Two that are easy to get wrong even after the code compiles:
+
+- **`flow root spawn` returns a *future*, not the walker.** Collect it with
+  `w = (wait f) as AdviceWorker;` — without the `as` cast, attribute access
+  fails to type-check (`E1032`).
+- **`visit` is deferred.** Node abilities run only *after* the current ability
+  returns, so a walker can't route and collect results in the same ability.
+  `step4_route.jac` gathers results at a later `CollectNode`.
+
+Also worth knowing: declare `by llm()` functions with **`def:pub`**. A plain
+`def ... by llm()` returns `None` at runtime under `jac run`.
 
 ---
 

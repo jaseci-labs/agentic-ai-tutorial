@@ -5,13 +5,18 @@ It runs the ReAct loop: reason → call tool → observe → repeat.
 
 import from "react-markdown" { default as ReactMarkdown }
 
-def:pub Step3(props: dict) -> JsxElement {
-    idea     = props["idea"] or "";
-    research = props["research"] or "";
-    loading  = props["loading"] or False;
-    error    = props["error"] or "";
-    is_done  = props["isDone"] or False;
-    is_locked = props["isLocked"] or False;
+def:pub Step3(
+    idea: str,
+    research: str,
+    loading: bool,
+    error: str,
+    isDone: bool,
+    isLocked: bool,
+    onIdeaChange: Callable[[ChangeEvent], None],
+    onSubmit: Callable[[], None]
+) -> JsxElement {
+    is_done   = isDone;
+    is_locked = isLocked;
 
     status_label = "done" if is_done else ("active" if not is_locked else "locked");
 
@@ -33,7 +38,7 @@ def:pub Step3(props: dict) -> JsxElement {
                     <label>Idea to research (pre-filled from your pitch)</label>
                     <textarea
                         value={idea}
-                        onChange={props["onIdeaChange"]}
+                        onChange={onIdeaChange}
                         placeholder="Describe your idea for the agent to research..."
                         rows={3}
                         disabled={loading}
@@ -42,7 +47,7 @@ def:pub Step3(props: dict) -> JsxElement {
 
                 <button
                     className="btn btn-primary s3"
-                    onClick={props["onSubmit"]}
+                    onClick={onSubmit}
                     disabled={loading or not idea}
                 >
                     {loading and "Researching..." or "Research Idea →"}

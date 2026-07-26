@@ -19,7 +19,7 @@ walker AdviceWorker {
     }
 }
 
-def get_advice(pitch: str, mentor: str) -> str by llm();
+def:pub get_advice(pitch: str, mentor: str) -> str by llm();
 
 sem get_advice = "Give practical next-step advice for building this hackathon project. Suggest 3-5 concrete first tasks.";
 
@@ -28,7 +28,7 @@ node WebDevMentor {
     has description: str = "Expert in web apps: React, APIs, databases, authentication, and full-stack deployment";
 
     can respond with HackathonAdvisor entry {
-        t = flow root() spawn AdviceWorker(pitch=visitor.pitch, mentor="Web Dev");
+        t = flow root spawn AdviceWorker(pitch=visitor.pitch, mentor="Web Dev");
         visitor.tasks = visitor.tasks + [t];
         visitor.mentors = visitor.mentors + ["Web Dev"];
     }
@@ -38,7 +38,7 @@ node MobileMentor {
     has description: str = "Expert in mobile apps: iOS, Android, React Native, Expo, and mobile UX";
 
     can respond with HackathonAdvisor entry {
-        t = flow root() spawn AdviceWorker(pitch=visitor.pitch, mentor="Mobile");
+        t = flow root spawn AdviceWorker(pitch=visitor.pitch, mentor="Mobile");
         visitor.tasks = visitor.tasks + [t];
         visitor.mentors = visitor.mentors + ["Mobile"];
     }
@@ -48,7 +48,7 @@ node AIMLMentor {
     has description: str = "Expert in AI/ML: LLMs, embeddings, computer vision, and model APIs like OpenAI";
 
     can respond with HackathonAdvisor entry {
-        t = flow root() spawn AdviceWorker(pitch=visitor.pitch, mentor="AI/ML");
+        t = flow root spawn AdviceWorker(pitch=visitor.pitch, mentor="AI/ML");
         visitor.tasks = visitor.tasks + [t];
         visitor.mentors = visitor.mentors + ["AI/ML"];
     }
@@ -58,7 +58,7 @@ node GameDevMentor {
     has description: str = "Expert in game dev: Unity, Godot, Pygame, game design, and interactive experiences";
 
     can respond with HackathonAdvisor entry {
-        t = flow root() spawn AdviceWorker(pitch=visitor.pitch, mentor="Game Dev");
+        t = flow root spawn AdviceWorker(pitch=visitor.pitch, mentor="Game Dev");
         visitor.tasks = visitor.tasks + [t];
         visitor.mentors = visitor.mentors + ["Game Dev"];
     }
@@ -73,10 +73,6 @@ walker HackathonAdvisor {
     has results: list = [];
 
     can route with Root entry {
-        # web     = WebDevMentor();
-        # mob     = MobileMentor();
-        # aiml    = AIMLMentor();
-        # game    = GameDevMentor();
         collect = CollectNode();
         here ++> WebDevMentor() ++> collect;
         here ++> MobileMentor() ++> collect;
@@ -85,21 +81,22 @@ walker HackathonAdvisor {
         # Route: LLM reads each node's description, visits the best match(es).
         # Each visited node flow-spawns an AdviceWorker — all run in parallel.
         visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch});
+        # `visit` is deferred, so results can't be collected here — the walker
+        # arrives at CollectNode only after every selected mentor has run.
         visit collect;
-        
     }
 
     can collect with CollectNode entry {
         # Await each parallel worker and collect results
         for i in range(len(self.tasks)) {
-            w = wait self.tasks[i];
+            w = (wait self.tasks[i]) as AdviceWorker;
             self.results = self.results + [{"mentor": self.mentors[i], "advice": w.advice}];
         }
     }
 }
 
 with entry {
-    advisor = root() spawn HackathonAdvisor(
+    advisor = root spawn HackathonAdvisor(
         pitch="A real-time multiplayer trivia game with AI-generated questions using WebSockets and React"
     );
     print("=== Step 4: Route + Spawn ===\n");

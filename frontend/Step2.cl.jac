@@ -3,13 +3,20 @@ Takes the brainstormed ideas (editable), returns a typed HackathonPitch object.
 The compiler enforces the schema — no parse-and-pray.
 """
 
-def:pub Step2(props: dict) -> JsxElement {
-    raw_idea  = props["rawIdea"] or "";
-    pitch     = props["pitch"] or {};
-    loading   = props["loading"] or False;
-    error     = props["error"] or "";
-    is_done   = props["isDone"] or False;
-    is_locked = props["isLocked"] or False;
+def:pub Step2(
+    rawIdea: str,
+    pitch: dict,
+    loading: bool,
+    error: str,
+    isDone: bool,
+    isLocked: bool,
+    onRawIdeaChange: Callable[[ChangeEvent], None],
+    onSubmit: Callable[[], None],
+    onCopyToStep3: Callable[[], None]
+) -> JsxElement {
+    raw_idea  = rawIdea;
+    is_done   = isDone;
+    is_locked = isLocked;
 
     status_label = "done" if is_done else ("active" if not is_locked else "locked");
 
@@ -35,7 +42,7 @@ def:pub Step2(props: dict) -> JsxElement {
                     <label>Your idea (edit or paste a new one)</label>
                     <textarea
                         value={raw_idea}
-                        onChange={props["onRawIdeaChange"]}
+                        onChange={onRawIdeaChange}
                         placeholder="Describe your hackathon idea..."
                         rows={4}
                         disabled={loading}
@@ -44,7 +51,7 @@ def:pub Step2(props: dict) -> JsxElement {
 
                 <button
                     className="btn btn-primary s2"
-                    onClick={props["onSubmit"]}
+                    onClick={onSubmit}
                     disabled={loading or not raw_idea}
                 >
                     {loading and "Structuring..." or "Structure Pitch →"}
@@ -89,7 +96,7 @@ def:pub Step2(props: dict) -> JsxElement {
                         </div>
                     </div>
                 </div>
-                <button className="btn btn-copy-idea" onClick={props["onCopyToStep3"]}>
+                <button className="btn btn-copy-idea" onClick={onCopyToStep3}>
                     Use this pitch for research →
                 </button>
             </div>}
