@@ -538,9 +538,13 @@ input::placeholder, textarea::placeholder { color: var(--text-dim); }
 
 .agent-wrap {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 280px 1fr 216px;
     gap: 16px;
     align-items: start;
+}
+@media (max-width: 1180px) {
+    .agent-wrap { grid-template-columns: 260px 1fr; }
+    .agent-sessions { grid-column: 1 / -1; position: static; }
 }
 @media (max-width: 880px) {
     .agent-wrap { grid-template-columns: 1fr; }
@@ -715,3 +719,62 @@ input::placeholder, textarea::placeholder { color: var(--text-dim); }
 .chat-input textarea:focus { outline: none; border-color: var(--accent); }
 .chat-input textarea:disabled { opacity: .5; }
 .chat-input .btn { flex: none; }
+
+/* ── session rail ── */
+.agent-sessions {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    position: sticky;
+    top: 16px;
+}
+.sess-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sess-title {
+    font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 700;
+}
+.sess-new {
+    margin-left: auto; background: none; border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 6px; padding: 3px 9px;
+    font-size: 11px; font-family: inherit; cursor: pointer; transition: .15s;
+}
+.sess-new:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.sess-new:disabled { opacity: .4; cursor: not-allowed; }
+.sess-empty { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; padding: 4px 2px; }
+
+.sess-item {
+    display: flex; align-items: stretch; gap: 2px;
+    border-radius: 8px; margin-bottom: 3px;
+    border: 1px solid transparent;
+    transition: background .15s, border-color .15s;
+}
+.sess-item:hover { background: var(--surface-2); }
+.sess-item.on { background: var(--surface-2); border-color: var(--accent); }
+.sess-open {
+    flex: 1; min-width: 0; text-align: left;
+    background: none; border: none; cursor: pointer;
+    padding: 7px 8px; font-family: inherit;
+    display: flex; flex-direction: column; gap: 2px;
+}
+.sess-name {
+    font-size: 12px; color: var(--text); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sess-item.on .sess-name { color: var(--accent); }
+.sess-meta { font-size: 10px; color: var(--text-dim); }
+.sess-del {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-dim); font-size: 15px; line-height: 1;
+    padding: 0 8px; opacity: 0; transition: opacity .15s, color .15s;
+}
+.sess-item:hover .sess-del { opacity: 1; }
+.sess-del:hover { color: var(--error); }
+.sess-foot {
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);
+    font-size: 10px; color: var(--text-dim); line-height: 1.55;
+}
+.sess-foot code {
+    background: var(--surface-2); border-radius: 3px;
+    padding: 0 3px; font-size: 9.5px;
+}

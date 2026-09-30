@@ -34,8 +34,8 @@ base_route_app = "app"
 # byLLM, the client framework, and the MCP server ship inside the `jac` binary.
 # Configure them with top-level tables — the old [plugins.*] paths no longer parse.
 [byllm.model]
-default_model = "gpt-4o-mini"
-api_key = "${OPENAI_API_KEY}"
+default_model = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+api_key = "${OPENROUTER_API_KEY}"
 
 [byllm.call_params]
 temperature = 0.7
