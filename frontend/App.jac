@@ -1,11 +1,11 @@
 """Main app component — owns all state and server calls.
-Imported by app.jac's cl {} block.
+Imported by app.jac's client entry.
 
 State flows downward through props; async handlers live here.
 Each step unlocks when the previous one completes.
 """
 
-sv import from ...app { run_brainstorm, run_structure, run_research, run_route }
+import from ..app { run_brainstorm, run_structure, run_research, run_route }
 # run_route args: title, problem, solution, tech_stack, wow_factor, research
 
 import from Step1 { Step1 }
@@ -25,7 +25,7 @@ def:pub App() -> JsxElement {
 
     # ── Step 2 state ─────────────────────────────────────────────────────────
     has raw_idea: str = "";
-    has pitch: dict = {};
+    has pitch: dict[str, any] = {};
 
     # ── Step 3 state ─────────────────────────────────────────────────────────
     has research_query: str = "";
@@ -33,12 +33,12 @@ def:pub App() -> JsxElement {
 
     # ── Step 4 state ─────────────────────────────────────────────────────────
     has pitch_summary: str = "";
-    has mentor_results: list = [];
+    has mentor_results: list[any] = [];
 
     # ── Progress tracking ─────────────────────────────────────────────────────
     has completed: int = 0;   # highest completed step (0 = none)
     has loading_step: int = 0;
-    has errors: dict = {};
+    has errors: dict[str, any] = {};
 
     # ── Step 1: Generate ─────────────────────────────────────────────────────
     async def do_brainstorm() -> None {

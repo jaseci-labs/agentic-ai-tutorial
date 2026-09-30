@@ -27,7 +27,7 @@ Then all four compose into a streaming chat agent — [agent.jac](agent.jac).
 
 ## Setup
 
-Requires **Jac 0.34 or newer** (`jac --version`).
+Requires **Jac 0.37 or newer** (`jac --version`).
 
 ```bash
 # 1. Install the Jac runtime (standalone binary)
@@ -45,10 +45,20 @@ export OPENROUTER_API_KEY="your-key-here"
 by the `[byllm.model]` table in `jac.toml` and is only fetched by that step — skip it
 and the first `by llm()` call fails with `'litellm' is required for this feature`.
 
+> **`jac install` crashes with `symbol not found in flat namespace '_PyExc_MemoryError'`?**
+> The 0.37.23 macOS arm64 binary cannot create the project venv itself. Create it
+> with any Python 3.14 first, then install again:
+>
+> ```bash
+> rm -rf .jac/venv
+> uv venv --seed --python 3.14 .jac/venv   # or: python3.14 -m venv .jac/venv
+> jac install
+> ```
+
 Check everything compiles:
 
 ```bash
-jac check app.jac
+jac check
 ```
 
 ---
@@ -69,7 +79,7 @@ jac run step4_route.jac
 ## Run the App
 
 ```bash
-jac start app.jac
+jac run
 # open http://localhost:8000
 ```
 
@@ -113,25 +123,29 @@ What makes it worth copying rather than just wiring tools onto a loop:
   Capabilities run on a worker thread while the endpoint drains that bus — which
   is why a tool call appears the moment it happens, not after the step finishes.
 
-Streaming is real SSE: `def:pub ... -> Generator` with `report stream()`, and the
-final answer streams token by token via `by llm(stream=True)`.
+Streaming is real SSE: a `def:pub` that `report`s a generator, with the final
+answer streaming token by token via `by llm(stream=True)`. The generator runs
+*after* the endpoint has returned, so the turns it saves are committed by hand
+(`commit()`) rather than by the request.
 
 **Frontend files:**
 ```
 frontend/
-├── App.cl.jac     ← main layout + state management
-├── Step1.cl.jac   ← Generate: brainstorm form
-├── Step2.cl.jac   ← Extract: structured pitch cards
-├── Step3.cl.jac   ← Invoke: research + GitHub results
-├── Step4.cl.jac   ← Route: mentor advice
+├── App.jac        ← main layout + state management
+├── AgentChat.jac  ← Agent chat: streaming transcript + live graph
+├── Step1.jac      ← Generate: brainstorm form
+├── Step2.jac      ← Extract: structured pitch cards
+├── Step3.jac      ← Invoke: research + GitHub results
+├── Step4.jac      ← Route: mentor advice
 └── styles.css     ← dark hackathon theme
 ```
 
-Server walkers in `app.jac` become HTTP endpoints automatically. The client
-imports them and spawns them directly:
+These are plain `.jac` files: a declaration that contains JSX is compiled for the
+browser, everything else runs on the server. `walker:pub` declarations in `app.jac`
+become HTTP endpoints automatically. The client imports them and spawns them directly:
 
 ```jac
-sv import from ...app { run_brainstorm }
+import from ..app { run_brainstorm }
 
 result = root spawn run_brainstorm(interests=interests, skills=skills);
 ideas  = result.reports[0];
@@ -139,19 +153,23 @@ ideas  = result.reports[0];
 
 ---
 
-## Jac 0.34 Notes
+## Jac 0.37 Notes
 
-Two that are easy to get wrong even after the code compiles:
+Easy to get wrong, even after the code compiles:
 
-- **`flow root spawn` returns a *future*, not the walker.** Collect it with
-  `w = (wait f) as AdviceWorker;` — without the `as` cast, attribute access
-  fails to type-check (`E1032`).
+- **`flow root spawn` returns a *future*, not the walker.** `wait f` gives the
+  walker back. When the future comes out of an untyped list (`list[any]`), bind
+  its type with `w = (wait f) as AdviceWorker;`.
 - **`visit` is deferred.** Node abilities run only *after* the current ability
   returns, so a walker can't route and collect results in the same ability.
   `step4_route.jac` gathers results at a later `CollectNode`.
-
-Also worth knowing: declare `by llm()` functions with **`def:pub`**. A plain
-`def ... by llm()` returns `None` at runtime under `jac run`.
+- **Where code runs is inferred.** There is no `cl { }` block, `.cl.jac` suffix or
+  `sv import` any more: JSX makes a declaration client code, and the rest is server.
+- **What is exposed is declared.** In a served app only `:pub` (or `:protect`)
+  declarations are endpoints. A plain or `:priv` `def`/`walker` is a server-side
+  helper.
+- **Generic types need their arguments.** `has xs: list = [];` is an error
+  (`E1036`); write `list[str]`, or `dict[str, any]` for mixed values.
 
 ---
 

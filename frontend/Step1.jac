@@ -1,6 +1,6 @@
 """Step 1 — Generate
 Brainstorm form: interests + skills → free-text ideas.
-Pure presentational component; App.cl.jac owns state and calls the server.
+Pure presentational component; App.jac owns state and calls the server.
 """
 
 import from "react-markdown" { default as ReactMarkdown }

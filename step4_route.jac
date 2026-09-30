@@ -68,9 +68,9 @@ node CollectNode {}  # walker walks here after all mentor visits to await worker
 
 walker HackathonAdvisor {
     has pitch: str;
-    has tasks: list = [];    # flow spawn handles (awaited with `wait`)
-    has mentors: list = [];  # parallel list: mentor name per task
-    has results: list = [];
+    has tasks: list[any] = [];    # flow spawn handles (awaited with `wait`)
+    has mentors: list[str] = [];  # parallel list: mentor name per task
+    has results: list[dict[str, str]] = [];
 
     can route with Root entry {
         collect = CollectNode();

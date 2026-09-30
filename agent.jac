@@ -66,10 +66,10 @@ import from tools { search_github, describe_tech_stack, estimate_build_time }
 # bus to publish to without every tool having to thread a run id through its
 # own signature.
 
-glob RUNS: dict = {};
+glob RUNS: dict[str, dict[str, any]] = {};
 glob TLS = threading.local();
 
-def emit(ev: dict) -> None {
+def emit(ev: dict[str, any]) -> None {
     rid = getattr(TLS, "run_id", None);
     if rid is None { return; }          # called outside a run — nothing to narrate
     slot = RUNS.get(rid);
@@ -165,7 +165,7 @@ obj RunCtx {
     has plan_caps: list[str] = [];
     has rationale: str = "";
     has findings: list[str] = [];
-    has notes: list[dict] = [];   # trace from the stage just executed
+    has notes: list[dict[str, str]] = [];   # trace from the stage just executed
 }
 
 # ── The cognition itself ──────────────────────────────────────────────────────
@@ -234,7 +234,7 @@ node CapabilityNode {
 
 # ── Stage behaviour ───────────────────────────────────────────────────────────
 
-walker StageExec {
+walker:priv StageExec {
     has ctx: RunCtx;
 
     can think with Stage entry {
@@ -268,7 +268,7 @@ walker StageExec {
 
 # ── Capability behaviour — one ability per capability ─────────────────────────
 
-walker CapabilityExec {
+walker:priv CapabilityExec {
     has ctx: RunCtx;
     has summary: str = "";
 
@@ -335,7 +335,7 @@ def ensure_agent_graph() -> AgentPipeline {
 
     p = AgentPipeline();
     root.shared ++> p;
-    grant(p, level=ReadPerm);
+    grant(p, level=AccessLevel.READ);
 
     s1 = Stage(key="perceive", label="Perceive", ord=1,
                blurb="Read the message in context and extract a typed Intent.");
@@ -361,8 +361,8 @@ def ensure_agent_graph() -> AgentPipeline {
     # The pipeline is shared, read-only config: anonymous callers must be able to
     # traverse it and spawn walkers at its nodes.
     for st in [s1, s2, s3, s4] {
-        grant(st, level=ReadPerm);
-        for c in [st-->][?:CapabilityNode] { grant(c, level=ReadPerm); }
+        grant(st, level=AccessLevel.READ);
+        for c in [st-->][?:CapabilityNode] { grant(c, level=AccessLevel.READ); }
     }
     return p;
 }
@@ -389,6 +389,13 @@ node ChatSession {
 node Turn {
     has role: str;
     has text: str;
+
+    # Turns are written while the reply streams — after the endpoint has returned,
+    # so not as the caller who reads them back later. Declaring the policy on the
+    # archetype keeps every Turn readable and deletable, whoever wrote it.
+    def __jac_access__ -> AccessLevel {
+        return AccessLevel.WRITE;
+    }
 }
 
 """All sessions, healing any row written before `sid` existed."""
@@ -417,9 +424,9 @@ def new_session() -> ChatSession {
     # Nodes on the commons are owned by the shared root, so an anonymous caller
     # has no rights on them by default. Without this grant the writes still
     # *appear* to work — the in-memory object updates — but the attach is
-    # refused, so turns silently vanish on restart. WritePerm because callers
+    # refused, so turns silently vanish on restart. WRITE because callers
     # both attach Turns (connect) and retitle the session (field write).
-    grant(s, level=WritePerm);
+    grant(s, level=AccessLevel.WRITE);
     return s;
 }
 
@@ -432,7 +439,7 @@ def resolve_session(sid: str) -> ChatSession {
     return existing[-1] if existing else new_session();
 }
 
-def session_view(s: ChatSession) -> dict {
+def session_view(s: ChatSession) -> dict[str, any] {
     turns = [s-->][?:Turn];
     return {
         "sid": s.sid, "title": s.title, "created": s.created, "turns": len(turns)
@@ -444,7 +451,7 @@ def session_view(s: ChatSession) -> dict {
 # target: a walker that lands on the session mutates it with the session's own
 # authority. This is the documented remedy, and it keeps the commons writable
 # without opening it up to arbitrary field writes from outside.
-walker AppendTurn {
+walker:priv AppendTurn {
     has role: str;
     has text: str;
 
@@ -453,7 +460,7 @@ walker AppendTurn {
     }
 }
 
-walker RetitleSession {
+walker:priv RetitleSession {
     has title: str;
 
     can retitle with ChatSession entry {
@@ -463,6 +470,9 @@ walker RetitleSession {
 
 def add_turn(s: ChatSession, role: str, text: str) -> None {
     s spawn AppendTurn(role=role, text=text);
+    # Called from the streaming generator, which runs after the endpoint has
+    # returned — outside the request that would otherwise commit the write.
+    commit();
 }
 
 def transcript(s: ChatSession, limit: int = 8) -> str {
@@ -471,28 +481,28 @@ def transcript(s: ChatSession, limit: int = 8) -> str {
     return "\n".join([t.role + ": " + t.text for t in recent]);
 }
 
-def:pub agent_sessions() -> dict {
+def:pub agent_sessions() -> dict[str, any] {
     return {"sessions": [session_view(s) for s in all_sessions()]};
 }
 
-def:pub agent_new_session() -> dict {
+def:pub agent_new_session() -> dict[str, any] {
     return {"session": session_view(new_session())};
 }
 
-def:pub agent_history(sid: str) -> dict {
+def:pub agent_history(sid: str) -> dict[str, any] {
     s = session_by_id(sid);
     if s is None { return {"turns": []}; }
     return {"turns": [{"role": t.role, "text": t.text} for t in [s-->][?:Turn]]};
 }
 
-def:pub agent_rename_session(sid: str, title: str) -> dict {
+def:pub agent_rename_session(sid: str, title: str) -> dict[str, any] {
     s = session_by_id(sid);
     if s is None { return {"ok": False}; }
     s.title = title;
     return {"ok": True, "session": session_view(s)};
 }
 
-def:pub agent_delete_session(sid: str) -> dict {
+def:pub agent_delete_session(sid: str) -> dict[str, any] {
     s = session_by_id(sid);
     if s is None { return {"ok": False}; }
     for t in [s-->][?:Turn] { del t; }
@@ -502,9 +512,9 @@ def:pub agent_delete_session(sid: str) -> dict {
 
 # ── Architecture introspection — the UI draws THIS ────────────────────────────
 
-def:pub agent_architecture() -> dict {
+def:pub agent_architecture() -> dict[str, any] {
     p = ensure_agent_graph();
-    spine: list[dict] = [];
+    spine: list[dict[str, any]] = [];
     cur = [p-->][?:Stage];
     while cur {
         st = cur[0];
@@ -556,7 +566,7 @@ def run_capability(run_id: str, cap_key: str) -> None {
 
 # ── Transport: walk the graph, turn what happens into SSE frames ──────────────
 
-def:pub agent_chat_stream(message: str, session_id: str = "") -> Generator {
+def:pub agent_chat_stream(message: str, session_id: str = "") -> None {
     def stream -> Generator[str, None, None] {
         p = ensure_agent_graph();
         session = resolve_session(session_id);

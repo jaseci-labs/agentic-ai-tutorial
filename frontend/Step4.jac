@@ -8,7 +8,7 @@ import from "react-markdown" { default as ReactMarkdown }
 
 def:pub Step4(
     pitch: str,
-    mentorResults: list,
+    mentorResults: list[any],
     loading: bool,
     error: str,
     isDone: bool,

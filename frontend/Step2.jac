@@ -5,7 +5,7 @@ The compiler enforces the schema — no parse-and-pray.
 
 def:pub Step2(
     rawIdea: str,
-    pitch: dict,
+    pitch: dict[str, any],
     loading: bool,
     error: str,
     isDone: bool,

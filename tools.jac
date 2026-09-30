@@ -13,12 +13,12 @@ import from urllib.request { urlopen, Request }
 import from urllib.parse { quote }
 
 # ── Real tool: hits the GitHub Search API (no auth needed for public search) ──
-def search_github(query: str, max_results: int = 3) -> str {
+def:priv search_github(query: str, max_results: int = 3) -> str {
     try {
         url = f"https://api.github.com/search/repositories?q={quote(query)}&sort=stars&per_page={max_results}";
         req = Request(url, headers={"User-Agent": "JacHacks/1.0", "Accept": "application/vnd.github.v3+json"});
         resp = json.loads(urlopen(req, timeout=10).read().decode());
-        repos: list = [];
+        repos: list[dict[str, any]] = [];
         for item in resp.get("items", []) {
             repos.append({
                 "name": item["full_name"],

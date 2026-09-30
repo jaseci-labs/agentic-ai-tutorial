@@ -2,8 +2,13 @@
 name = "jachacks-pitch-builder"
 version = "0.1.0"
 description = "Hackathon Pitch Builder — JacHacks agentic AI workshop"
-entry-point = "app.jac"
-jac-version = ">=0.34"
+jac-version = ">=0.37"
+default-app = "jachacks-pitch-builder"
+
+# One app: the web UI plus the server endpoints behind it. `jac run` serves it.
+[apps.jachacks-pitch-builder]
+kind = "web-app"
+entry-point = "app"
 
 [dependencies]
 
