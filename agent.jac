@@ -36,28 +36,45 @@ Six properties make this worth copying:
      stage boundaries into SSE frames — swap it for a CLI and nothing changes.
 
   6. THE AGENT NARRATES ITSELF. Stages, capabilities and individual tool calls
-     all publish to one event bus, so the trace the UI draws IS the execution
+     all publish to an event bus, so the trace the UI draws IS the execution
      path rather than a reconstruction of it. Capabilities run on a worker
      thread while the endpoint drains that bus, which is what makes a tool call
      visible the moment it happens instead of after the step finishes.
 
-Concurrency note: the bus and run slot below are module-level, so one server
-handles one conversation at a time. That keeps the example readable; a
-multi-tenant version would key both by session id.
+  7. STATE IS THE GRAPH. Chat sessions and their turns are nodes hanging off
+     `root`, so conversations persist across restarts with no database, no
+     schema and no ORM. Everything attaches to the public root — there is no
+     auth by design, which is also why this is shareable as-is.
+
+Each in-flight run gets its own bus keyed by run id, so two sessions streaming
+at the same time never cross frames.
 """
 
 import json;
+import threading;
+import uuid;
+import from datetime { datetime }
 import from queue { Queue }
 import from typing { Generator }
 import from tools { search_github, describe_tech_stack, estimate_build_time }
 
 # ── The event bus ─────────────────────────────────────────────────────────────
+# One bus per in-flight run, keyed by run id, so two sessions streaming at the
+# same time never see each other's frames. A capability runs on its own worker
+# thread, and that thread stamps its run id into thread-local storage — which is
+# how `emit`, called from deep inside whichever tool the LLM chose, knows which
+# bus to publish to without every tool having to thread a run id through its
+# own signature.
 
-glob BUS: Queue = Queue();
-glob SLOT: dict = {};
+glob RUNS: dict[str, dict[str, any]] = {};
+glob TLS = threading.local();
 
-def emit(ev: dict) -> None {
-    BUS.put(ev);
+def emit(ev: dict[str, any]) -> None {
+    rid = getattr(TLS, "run_id", None);
+    if rid is None { return; }          # called outside a run — nothing to narrate
+    slot = RUNS.get(rid);
+    if slot is None { return; }
+    slot["bus"].put(ev);
 }
 
 # ── Instrumented tools — the ReAct loop narrates itself ───────────────────────
@@ -148,7 +165,7 @@ obj RunCtx {
     has plan_caps: list[str] = [];
     has rationale: str = "";
     has findings: list[str] = [];
-    has notes: list[dict] = [];   # trace from the stage just executed
+    has notes: list[dict[str, str]] = [];   # trace from the stage just executed
 }
 
 # ── The cognition itself ──────────────────────────────────────────────────────
@@ -217,7 +234,7 @@ node CapabilityNode {
 
 # ── Stage behaviour ───────────────────────────────────────────────────────────
 
-walker StageExec {
+walker:priv StageExec {
     has ctx: RunCtx;
 
     can think with Stage entry {
@@ -251,7 +268,7 @@ walker StageExec {
 
 # ── Capability behaviour — one ability per capability ─────────────────────────
 
-walker CapabilityExec {
+walker:priv CapabilityExec {
     has ctx: RunCtx;
     has summary: str = "";
 
@@ -313,11 +330,12 @@ def cap_key(c: Capability) -> str {
 # ── Graph construction ────────────────────────────────────────────────────────
 
 def ensure_agent_graph() -> AgentPipeline {
-    found = [root-->][?:AgentPipeline];
+    found = [root.shared-->][?:AgentPipeline];
     if found { return found[0]; }
 
     p = AgentPipeline();
-    root ++> p;
+    root.shared ++> p;
+    grant(p, level=AccessLevel.READ);
 
     s1 = Stage(key="perceive", label="Perceive", ord=1,
                blurb="Read the message in context and extract a typed Intent.");
@@ -339,49 +357,164 @@ def ensure_agent_graph() -> AgentPipeline {
         blurb="Search GitHub, pick a stack, estimate build time.");
     s3 ++> CapabilityNode(key="mentors", label="Mentors", pattern="Route + Spawn",
         blurb="Ask the most relevant domain experts.");
+
+    # The pipeline is shared, read-only config: anonymous callers must be able to
+    # traverse it and spawn walkers at its nodes.
+    for st in [s1, s2, s3, s4] {
+        grant(st, level=AccessLevel.READ);
+        for c in [st-->][?:CapabilityNode] { grant(c, level=AccessLevel.READ); }
+    }
     return p;
 }
 
 # ── Conversation memory, persisted in the graph ───────────────────────────────
 
-node ChatSession {}
+# Sessions hang off `root.shared` — the deployment's public commons — and persist
+# across restarts for free: no database, no schema, no ORM. `root.shared` rather
+# than `root` is deliberate: with no auth, each anonymous request gets its own
+# `root`, so anything written there would be invisible to the next request (and
+# the write is refused outright). The commons is what makes the demo work
+# shareable-as-is. Swapping these to `root` + `:priv` is all per-user isolation
+# would take, since every logged-in user gets their own root automatically.
+
+# Every field carries a default. A `has` with no default cannot be loaded from a
+# row written before that field existed ("required field missing from stored
+# data"), which turns any later schema change into a hard read error.
+node ChatSession {
+    has sid: str = "";
+    has title: str = "New chat";
+    has created: str = "";
+}
 
 node Turn {
     has role: str;
     has text: str;
+
+    # Turns are written while the reply streams — after the endpoint has returned,
+    # so not as the caller who reads them back later. Declaring the policy on the
+    # archetype keeps every Turn readable and deletable, whoever wrote it.
+    def __jac_access__ -> AccessLevel {
+        return AccessLevel.WRITE;
+    }
 }
 
-def ensure_session() -> ChatSession {
-    found = [root-->][?:ChatSession];
-    if found { return found[0]; }
-    s = ChatSession();
-    root ++> s;
+"""All sessions, healing any row written before `sid` existed."""
+def all_sessions() -> list[ChatSession] {
+    out: list[ChatSession] = [];
+    for s in [root.shared-->][?:ChatSession] {
+        if not s.sid { s.sid = uuid.uuid4().hex[:12]; }
+        out.append(s);
+    }
+    return out;
+}
+
+def session_by_id(sid: str) -> ChatSession | None {
+    for s in all_sessions() {
+        if s.sid == sid { return s; }
+    }
+    return None;
+}
+
+def new_session() -> ChatSession {
+    s = ChatSession(
+        sid=uuid.uuid4().hex[:12],
+        created=datetime.now().isoformat(timespec="seconds")
+    );
+    root.shared ++> s;
+    # Nodes on the commons are owned by the shared root, so an anonymous caller
+    # has no rights on them by default. Without this grant the writes still
+    # *appear* to work — the in-memory object updates — but the attach is
+    # refused, so turns silently vanish on restart. WRITE because callers
+    # both attach Turns (connect) and retitle the session (field write).
+    grant(s, level=AccessLevel.WRITE);
     return s;
 }
 
-def transcript(limit: int = 8) -> str {
-    turns = [ensure_session()-->][?:Turn];
+def resolve_session(sid: str) -> ChatSession {
+    if sid {
+        found = session_by_id(sid);
+        if found is not None { return found; }
+    }
+    existing = all_sessions();
+    return existing[-1] if existing else new_session();
+}
+
+def session_view(s: ChatSession) -> dict[str, any] {
+    turns = [s-->][?:Turn];
+    return {
+        "sid": s.sid, "title": s.title, "created": s.created, "turns": len(turns)
+    };
+}
+
+# Writing to a node you do not own is refused. Rather than granting ever-wider
+# permissions to anonymous callers, route the write through an ability ON the
+# target: a walker that lands on the session mutates it with the session's own
+# authority. This is the documented remedy, and it keeps the commons writable
+# without opening it up to arbitrary field writes from outside.
+walker:priv AppendTurn {
+    has role: str;
+    has text: str;
+
+    can add with ChatSession entry {
+        here ++> Turn(role=self.role, text=self.text);
+    }
+}
+
+walker:priv RetitleSession {
+    has title: str;
+
+    can retitle with ChatSession entry {
+        here.title = self.title;
+    }
+}
+
+def add_turn(s: ChatSession, role: str, text: str) -> None {
+    s spawn AppendTurn(role=role, text=text);
+    # Called from the streaming generator, which runs after the endpoint has
+    # returned — outside the request that would otherwise commit the write.
+    commit();
+}
+
+def transcript(s: ChatSession, limit: int = 8) -> str {
+    turns = [s-->][?:Turn];
     recent = turns[-limit:] if len(turns) > limit else turns;
     return "\n".join([t.role + ": " + t.text for t in recent]);
 }
 
-def:pub agent_history() -> list[dict] {
-    return [{"role": t.role, "text": t.text} for t in [ensure_session()-->][?:Turn]];
+def:pub agent_sessions() -> dict[str, any] {
+    return {"sessions": [session_view(s) for s in all_sessions()]};
 }
 
-def:pub agent_reset() -> dict {
-    for s in [root-->][?:ChatSession] {
-        for t in [s-->][?:Turn] { del t; }
-        del s;
-    }
+def:pub agent_new_session() -> dict[str, any] {
+    return {"session": session_view(new_session())};
+}
+
+def:pub agent_history(sid: str) -> dict[str, any] {
+    s = session_by_id(sid);
+    if s is None { return {"turns": []}; }
+    return {"turns": [{"role": t.role, "text": t.text} for t in [s-->][?:Turn]]};
+}
+
+def:pub agent_rename_session(sid: str, title: str) -> dict[str, any] {
+    s = session_by_id(sid);
+    if s is None { return {"ok": False}; }
+    s.title = title;
+    return {"ok": True, "session": session_view(s)};
+}
+
+def:pub agent_delete_session(sid: str) -> dict[str, any] {
+    s = session_by_id(sid);
+    if s is None { return {"ok": False}; }
+    for t in [s-->][?:Turn] { del t; }
+    del s;
     return {"ok": True};
 }
 
 # ── Architecture introspection — the UI draws THIS ────────────────────────────
 
-def:pub agent_architecture() -> dict {
+def:pub agent_architecture() -> dict[str, any] {
     p = ensure_agent_graph();
-    spine: list[dict] = [];
+    spine: list[dict[str, any]] = [];
     cur = [p-->][?:Stage];
     while cur {
         st = cur[0];
@@ -397,9 +530,7 @@ def:pub agent_architecture() -> dict {
     return {"stages": spine};
 }
 
-# ── Worker: runs one capability so the endpoint can drain the bus live ────────
-# Takes no arguments — nothing crosses the `flow` boundary (E1308), so the
-# worker resolves its own node from the graph by key.
+# ── Worker: runs one capability so the endpoint can drain its bus live ────────
 
 """Walk the spine to find a capability — they hang off Act, not off the anchor."""
 def find_capability(key: str) -> CapabilityNode | None {
@@ -414,18 +545,19 @@ def find_capability(key: str) -> CapabilityNode | None {
     return None;
 }
 
-def run_capability() -> None {
+def run_capability(run_id: str, cap_key: str) -> None {
+    # Stamp the run id on this thread so `emit` — reached from inside whichever
+    # tool the LLM calls — can find the right bus without being handed one.
+    setattr(TLS, "run_id", run_id);
+    slot = RUNS[run_id];
     try {
-        key = SLOT["cap_key"] as str;
-        ctx = SLOT["ctx"] as RunCtx;
-        cap = find_capability(key);
+        cap = find_capability(cap_key);
         if cap is None {
-            raise ValueError("no capability node named " + key);
+            raise ValueError("no capability node named " + cap_key);
         }
-        w = cap spawn CapabilityExec(ctx=ctx);
-        SLOT["summary"] = w.summary;
+        w = cap spawn CapabilityExec(ctx=slot["ctx"] as RunCtx);
+        slot["summary"] = w.summary;
     } except Exception as e {
-        SLOT["error"] = str(e);
         emit({"t": "error", "msg": str(e)});
     } finally {
         emit({"t": "__end__"});
@@ -434,12 +566,24 @@ def run_capability() -> None {
 
 # ── Transport: walk the graph, turn what happens into SSE frames ──────────────
 
-def:pub agent_chat_stream(message: str) -> Generator {
+def:pub agent_chat_stream(message: str, session_id: str = "") -> None {
     def stream -> Generator[str, None, None] {
         p = ensure_agent_graph();
-        session = ensure_session();
-        ctx = RunCtx(message=message, history=transcript());
-        session ++> Turn(role="user", text=message);
+        session = resolve_session(session_id);
+        ctx = RunCtx(message=message, history=transcript(session));
+
+        # First thing the user says names the chat, the way ChatGPT does it.
+        if session.title == "New chat" {
+            session spawn RetitleSession(
+                title=message[:48] + ("…" if len(message) > 48 else "")
+            );
+        }
+        add_turn(session, "user", message);
+
+        run_id = uuid.uuid4().hex;
+        RUNS[run_id] = {"bus": Queue(), "ctx": ctx, "summary": ""};
+        slot = RUNS[run_id];
+        yield json.dumps({"t": "session", "sid": session.sid, "title": session.title});
 
         answer = "";
         try {
@@ -456,14 +600,13 @@ def:pub agent_chat_stream(message: str) -> Generator {
                         }
                         yield json.dumps({"t": "cap", "id": cap.key, "status": "active"});
 
-                        SLOT["cap_key"] = cap.key;
-                        SLOT["ctx"] = ctx;
-                        SLOT["summary"] = "";
-                        task = flow run_capability();
+                        slot["summary"] = "";
+                        cap_key = cap.key;
+                        task = flow run_capability(run_id, cap_key);
 
                         draining = True;
                         while draining {
-                            ev = BUS.get();
+                            ev = slot["bus"].get();
                             if ev["t"] == "__end__" { draining = False; continue; }
                             ev["cap"] = cap.key;
                             yield json.dumps(ev);
@@ -472,7 +615,7 @@ def:pub agent_chat_stream(message: str) -> Generator {
 
                         yield json.dumps({
                             "t": "cap", "id": cap.key, "status": "done",
-                            "detail": SLOT["summary"]
+                            "detail": slot["summary"]
                         });
                     }
                 } elif st.key == "synthesize" {
@@ -498,9 +641,10 @@ def:pub agent_chat_stream(message: str) -> Generator {
         }
 
         if answer {
-            session ++> Turn(role="assistant", text=answer);
+            add_turn(session, "assistant", answer);
         }
-        yield json.dumps({"t": "final"});
+        RUNS.pop(run_id, None);          # the run is over; drop its bus
+        yield json.dumps({"t": "final", "sid": session.sid});
     }
     report stream();
 }

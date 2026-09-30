@@ -2,8 +2,13 @@
 name = "jachacks-pitch-builder"
 version = "0.1.0"
 description = "Hackathon Pitch Builder — JacHacks agentic AI workshop"
-entry-point = "app.jac"
-jac-version = ">=0.34"
+jac-version = ">=0.37"
+default-app = "jachacks-pitch-builder"
+
+# One app: the web UI plus the server endpoints behind it. `jac run` serves it.
+[apps.jachacks-pitch-builder]
+kind = "web-app"
+entry-point = "app"
 
 [dependencies]
 
@@ -17,8 +22,11 @@ react-error-boundary = "^5.0.0"
 "@tanstack/react-form" = "^1.0.0"
 zod = "^4.3.6"
 react-markdown = "^9.0.1"
+remark-gfm = "^4.0.0"
 
 [dependencies.npm.dev]
+tailwindcss = "^4.1.17"
+"@tailwindcss/vite" = "^4.1.17"
 vite = "^6.4.1"
 "@vitejs/plugin-react" = "^4.2.1"
 typescript = "^5.3.3"
@@ -31,11 +39,16 @@ watchdog = ">=3.0.0"
 [serve]
 base_route_app = "app"
 
+# Tailwind v4 runs as a Vite plugin; frontend/styles.css is its entry.
+[client.vite]
+plugins = ["tailwindcss()"]
+lib_imports = ["import tailwindcss from '@tailwindcss/vite'"]
+
 # byLLM, the client framework, and the MCP server ship inside the `jac` binary.
 # Configure them with top-level tables — the old [plugins.*] paths no longer parse.
 [byllm.model]
-default_model = "gpt-4o-mini"
-api_key = "${OPENAI_API_KEY}"
+default_model = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+api_key = "${OPENROUTER_API_KEY}"
 
 [byllm.call_params]
 temperature = 0.7
