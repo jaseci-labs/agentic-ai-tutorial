@@ -3,7 +3,7 @@ Brainstorm form: interests + skills → free-text ideas.
 Pure presentational component; App.jac owns state and calls the server.
 """
 
-import from "react-markdown" { default as ReactMarkdown }
+import from ui { StepCard, PrimaryButton, TypingDots, ErrorBanner, Markdown, LABEL, INPUT, RESULT }
 
 def:pub Step1(
     interests: str,
@@ -17,67 +17,52 @@ def:pub Step1(
     onSkillsChange: Callable[[ChangeEvent], None],
     onSubmit: Callable[[], None]
 ) -> JsxElement {
-    is_done   = isDone;
-    is_locked = isLocked;
+    state = "done" if isDone else ("locked" if isLocked else "active");
 
-    status_label = "done" if is_done else ("active" if not is_locked else "locked");
-
-    return <div className={"step-card s1 " + ("done" if is_done else ("locked" if is_locked else "active"))}>
-        <div className="step-header">
-            <div className="step-num">1</div>
-            <div className="step-meta">
-                <div className="step-title">Generate — Brainstorm</div>
-                <div className="step-subtitle">LLM returns free text from a function signature</div>
+    return <StepCard
+        num={1}
+        accent="gen"
+        title="Generate — Brainstorm"
+        subtitle="LLM returns free text from a function signature"
+        state={state}
+        busy={loading}
+    >
+        <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label className={LABEL}>Your interests</label>
+                <input
+                    type="text"
+                    className={INPUT}
+                    value={interests}
+                    onChange={onInterestsChange}
+                    placeholder="music, social apps, helping students..."
+                    disabled={isDone or loading}
+                />
             </div>
-            <span className={"step-status " + status_label}>
-                {"✓ done" if is_done else ("running" if loading else ("locked" if is_locked else "ready"))}
-            </span>
+            <div>
+                <label className={LABEL}>Your skills</label>
+                <input
+                    type="text"
+                    className={INPUT}
+                    value={skills}
+                    onChange={onSkillsChange}
+                    placeholder="Python, some web dev..."
+                    disabled={isDone or loading}
+                />
+            </div>
         </div>
 
-        <div className="step-body">
-            <div className="input-row">
-                <div className="input-group">
-                    <label>Your interests</label>
-                    <input
-                        type="text"
-                        value={interests}
-                        onChange={onInterestsChange}
-                        placeholder="music, social apps, helping students..."
-                        disabled={is_done or loading}
-                    />
-                </div>
-                <div className="input-group">
-                    <label>Your skills</label>
-                    <input
-                        type="text"
-                        value={skills}
-                        onChange={onSkillsChange}
-                        placeholder="Python, some web dev..."
-                        disabled={is_done or loading}
-                    />
-                </div>
-            </div>
+        {not isDone and <div className="mt-4 flex items-center gap-4">
+            <PrimaryButton accent="gen" disabled={loading or not interests or not skills} onClick={onSubmit}>
+                {"Brainstorming..." if loading else "Brainstorm Ideas →"}
+            </PrimaryButton>
+            {loading and <TypingDots />}
+        </div>}
 
-            {not is_done and <button
-                className="btn btn-primary"
-                onClick={onSubmit}
-                disabled={loading or not interests or not skills}
-            >
-                {loading and "Brainstorming..."  or "Brainstorm Ideas →"}
-            </button>}
+        {error and <div className="mt-4"><ErrorBanner message={error} /></div>}
 
-            {loading and <div className="typing-indicator">
-                <div className="typing-dot"></div>
-                <div className="typing-dot"></div>
-                <div className="typing-dot"></div>
-            </div>}
-
-            {error and <div className="error-banner">{error}</div>}
-
-            {ideas and <div className="result-area">
-                <hr />
-                <div className="result-text"><ReactMarkdown>{ideas}</ReactMarkdown></div>
-            </div>}
-        </div>
-    </div>;
+        {ideas and <div className={RESULT}>
+            <Markdown text={ideas} />
+        </div>}
+    </StepCard>;
 }

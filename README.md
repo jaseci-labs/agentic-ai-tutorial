@@ -137,8 +137,14 @@ frontend/
 ├── Step2.jac      ← Extract: structured pitch cards
 ├── Step3.jac      ← Invoke: research + GitHub results
 ├── Step4.jac      ← Route: mentor advice
-└── styles.css     ← dark hackathon theme
+├── ui.jac         ← shared pieces: step card, button, markdown
+└── styles.css     ← Tailwind entry: theme tokens + markdown styles
 ```
+
+Styling is [Tailwind CSS v4](https://tailwindcss.com), wired in as a Vite plugin
+under `[client.vite]` in `jac.toml`. Colours are named once as theme tokens in
+`styles.css` (`bg-panel`, `text-dim`, `border-line`, …) and used as utility classes
+on the components.
 
 These are plain `.jac` files: a declaration that contains JSX is compiled for the
 browser, everything else runs on the server. `walker:pub` declarations in `app.jac`
