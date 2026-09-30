@@ -250,10 +250,9 @@ with entry {
     ta = flow root spawn ResearcherA(topic="topic A");
     tb = flow root spawn ResearcherB(topic="topic B");
 
-    # Launch everything first, then wait. `wait` gives back the finished
-    # walker, but the checker sees it as Unknown — bind it with `as`.
-    a = (wait ta) as ResearcherA;
-    b = (wait tb) as ResearcherB;
+    # Launch everything first, then wait. `wait` gives back the finished walker.
+    a = wait ta;
+    b = wait tb;
 
     print(a.findings);
     print(b.findings);
@@ -263,8 +262,9 @@ with entry {
 **Rules:**
 - The keyword order is `flow root spawn W(...)`, not `root flow spawn W(...)`.
 - `flow ... spawn` returns a future; `spawn` blocks and returns the walker.
-- Always `(wait f) as WalkerType` — without the cast you get
-  `E1032: Type is Unknown, cannot access attribute ...`.
+- `wait f` returns the finished walker, typed from the future. A future pulled
+  out of an untyped list (`list[any]`) carries no type — bind it with
+  `(wait f) as WalkerType` so attribute access is still checked.
 - Launch all, then wait all. A `wait` right after each `flow` runs them serially.
 - To `wait` a mixed list of walker types, give them a common base walker
   (`walker HW(Researcher) { ... }`) and cast to that base.
@@ -280,7 +280,7 @@ with entry {
 | `[-->]` | All child nodes of current node |
 | `root spawn Walker(...)` | Launch walker from root (blocking, returns walker) |
 | `flow root spawn Walker(...)` | Launch walker from root (non-blocking, returns future) |
-| `(wait f) as Walker` | Block on a future and bind its walker type |
+| `wait f` | Block on a future and get its walker back (`(wait f) as Walker` binds the type) |
 
 Note: `root` is a bare keyword — `root()` is an error (`E0049`).
 
@@ -311,10 +311,8 @@ Always add `sem` to tool functions used in `by llm(tools=[...])`.
 | Forgetting `++>` to connect nodes | Connect all nodes to `root` before spawning walker |
 | Infinite Loop | Always cap with `for i in range(N)` |
 | Missing semicolons | Every statement ends with `;` |
-| `def fn(...) by llm();` | Use `def:pub` — a plain `def` by-llm returns `None` under `jac run` |
 | `root()` | Bare `root` — it's a keyword, not a call (`E0049`) |
 | `root flow spawn W()` | `flow root spawn W()` — `flow` comes first |
-| `w = wait f; w.field` | `w = (wait f) as W;` — else `E1032` |
 | Two `can x with A entry` / `can x with B entry` | Give each ability a unique name (`E0076`) |
 | Collecting results after `visit` in the same ability | `visit` is deferred — collect at a later node |
 | `pass;` | Not supported (`E0010`) — leave the block empty |
@@ -322,3 +320,12 @@ Always add `sem` to tool functions used in `by llm(tools=[...])`.
 | `lambda -> None { ... }` | `lambda { ... }` for a no-arg handler |
 | Client `props: dict` + `props["onX"]` | Named typed params: `onX: Callable[[ChangeEvent], None]` (`E1101`) |
 | `[plugins.byllm]` in jac.toml | Top-level `[byllm.model]` — `[plugins.*]` no longer parses |
+| `has xs: list = [];`, `-> dict` | Name the element types: `list[str]`, `dict[str, any]` (`E1036`) |
+| `cl { ... }`, `Foo.cl.jac`, `sv import` | Removed — placement is inferred: JSX makes a declaration client code. Plain `.jac`, plain `import` |
+| Plain `def` / `walker` expected to be an endpoint | Only `:pub` / `:protect` are served. Plain is private; write `:priv` to say so explicitly |
+| `grant(n, level=ReadPerm)` | `AccessLevel.READ` / `.CONNECT` / `.WRITE` — the `*Perm` constants were removed |
+| `def:pub f() -> Generator { report gen(); }` | `-> None` — a def that only `report`s a stream returns nothing (`E1004`) |
+| Graph writes inside a reported generator | It runs after the endpoint returned, outside the request: call `commit()`, and don't assume the caller owns what it creates |
+| Expecting an enum's name on the client | An enum crosses the wire as its value — use `enum E: str { A = "A" }` when the UI needs the name |
+| `jac start app.jac` | `jac run` — serves the app declared under `[apps.<name>]` in jac.toml |
+| `entry-point = "app.jac"` | A dotted module name, under `[apps.<name>]`: `entry-point = "app"` |

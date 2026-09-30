@@ -7,23 +7,23 @@ you see is the running system, not a picture of it.
 
 import from "react-markdown" { default as ReactMarkdown }
 
-glob STATUS_LABEL: dict = {
+glob STATUS_LABEL: dict[str, str] = {
     "idle": "", "active": "running", "done": "done", "skipped": "skipped"
 };
 
 def:pub AgentChat() -> JsxElement {
-    has arch: list[dict] = [];
-    has turns: list[dict] = [];        # {role, text}
+    has arch: list[dict[str, any]] = [];
+    has turns: list[dict[str, any]] = [];  # {role, text}
     has draft: str = "";         # assistant text streaming in right now
     has input_text: str = "";
     has busy: bool = False;
-    has stage_state: dict = {};  # stage key  -> idle|active|done
-    has cap_state: dict = {};    # cap key    -> idle|active|done|skipped
-    has cap_detail: dict = {};   # cap key    -> short result summary
-    has notes: list[dict] = [];        # {id,label,value} from Perceive/Plan
-    has tools: list[dict] = [];        # {name,arg,phase,cap}
+    has stage_state: dict[str, str] = {};  # stage key  -> idle|active|done
+    has cap_state: dict[str, str] = {};    # cap key    -> idle|active|done|skipped
+    has cap_detail: dict[str, str] = {};   # cap key    -> short result summary
+    has notes: list[dict[str, any]] = [];  # {id,label,value} from Perceive/Plan
+    has tools: list[dict[str, any]] = [];  # {name,arg,phase,cap}
     has err: str = "";
-    has sessions: list[dict] = [];
+    has sessions: list[dict[str, any]] = [];
     has sid: str = "";           # active session
 
     async can with entry {
@@ -34,7 +34,7 @@ def:pub AgentChat() -> JsxElement {
                 "body": "{}"
             });
             payload: any = await r.json();
-            arch = payload["data"]["result"]["stages"] as list[dict];
+            arch = payload["data"]["result"]["stages"] as list[dict[str, any]];
         } except Exception as e {
             err = "Could not load the agent graph: " + str(e);
         }
@@ -49,7 +49,7 @@ def:pub AgentChat() -> JsxElement {
                 "body": "{}"
             });
             j: any = await r.json();
-            sessions = j["data"]["result"]["sessions"] as list[dict];
+            sessions = j["data"]["result"]["sessions"] as list[dict[str, any]];
         } except Exception as e { err = str(e); }
     }
 
@@ -65,7 +65,7 @@ def:pub AgentChat() -> JsxElement {
                 "body": JSON.stringify({"sid": target})
             });
             j: any = await r.json();
-            turns = j["data"]["result"]["turns"] as list[dict];
+            turns = j["data"]["result"]["turns"] as list[dict[str, any]];
         } except Exception as e { err = str(e); }
     }
 
@@ -101,11 +101,11 @@ def:pub AgentChat() -> JsxElement {
     }
 
     def reset_run() -> None {
-        ss: dict = {};
-        cs: dict = {};
+        ss: dict[str, str] = {};
+        cs: dict[str, str] = {};
         for st in arch {
             ss[st["key"]] = "idle";
-            for c in (st["capabilities"] as list[dict]) { cs[c["key"]] = "idle"; }
+            for c in (st["capabilities"] as list[dict[str, any]]) { cs[c["key"]] = "idle"; }
         }
         stage_state = ss;
         cap_state = cs;
@@ -240,9 +240,9 @@ def:pub AgentChat() -> JsxElement {
                     </div>
                     <div className="arch-blurb">{st["blurb"]}</div>
 
-                    {if len(st["capabilities"] as list) > 0 {
+                    {if len(st["capabilities"] as list[any]) > 0 {
                         <div className="arch-caps">
-                            {for c in (st["capabilities"] as list[dict]) {
+                            {for c in (st["capabilities"] as list[dict[str, any]]) {
                                 <div key={c["key"]} className={"arch-cap " + (cap_state[c["key"]] or "idle")}>
                                     <span className="cap-dot"></span>
                                     <span className="cap-label">{c["label"]}</span>
