@@ -23,6 +23,8 @@ def:pub AgentChat() -> JsxElement {
     has notes: list[dict] = [];        # {id,label,value} from Perceive/Plan
     has tools: list[dict] = [];        # {name,arg,phase,cap}
     has err: str = "";
+    has sessions: list[dict] = [];
+    has sid: str = "";           # active session
 
     async can with entry {
         try {
@@ -36,6 +38,66 @@ def:pub AgentChat() -> JsxElement {
         } except Exception as e {
             err = "Could not load the agent graph: " + str(e);
         }
+        await load_sessions();
+    }
+
+    async def load_sessions() -> None {
+        try {
+            r: any = await fetch("/function/agent_sessions", {
+                "method": "POST",
+                "headers": {"Content-Type": "application/json"},
+                "body": "{}"
+            });
+            j: any = await r.json();
+            sessions = j["data"]["result"]["sessions"] as list[dict];
+        } except Exception as e { err = str(e); }
+    }
+
+    async def open_session(target: str) -> None {
+        if busy { return; }
+        sid = target;
+        draft = "";
+        reset_run();
+        try {
+            r: any = await fetch("/function/agent_history", {
+                "method": "POST",
+                "headers": {"Content-Type": "application/json"},
+                "body": JSON.stringify({"sid": target})
+            });
+            j: any = await r.json();
+            turns = j["data"]["result"]["turns"] as list[dict];
+        } except Exception as e { err = str(e); }
+    }
+
+    async def new_session() -> None {
+        if busy { return; }
+        try {
+            r: any = await fetch("/function/agent_new_session", {
+                "method": "POST",
+                "headers": {"Content-Type": "application/json"},
+                "body": "{}"
+            });
+            j: any = await r.json();
+            created: any = j["data"]["result"]["session"];
+            sid = str(created["sid"]);
+            turns = [];
+            draft = "";
+            reset_run();
+            await load_sessions();
+        } except Exception as e { err = str(e); }
+    }
+
+    async def delete_session(target: str) -> None {
+        if busy { return; }
+        try {
+            await fetch("/function/agent_delete_session", {
+                "method": "POST",
+                "headers": {"Content-Type": "application/json"},
+                "body": JSON.stringify({"sid": target})
+            });
+            if target == sid { sid = ""; turns = []; draft = ""; }
+            await load_sessions();
+        } except Exception as e { err = str(e); }
     }
 
     def reset_run() -> None {
@@ -80,7 +142,7 @@ def:pub AgentChat() -> JsxElement {
             resp: any = await fetch("/function/agent_chat_stream", {
                 "method": "POST",
                 "headers": {"Content-Type": "application/json"},
-                "body": JSON.stringify({"message": text})
+                "body": JSON.stringify({"message": text, "session_id": sid})
             });
             reader: any = resp.body.getReader();
             # `new()` needs a resolvable class, so bind the JS constructor first.
@@ -128,6 +190,10 @@ def:pub AgentChat() -> JsxElement {
                         } elif kind == "tool" {
                             acc_tools = acc_tools + [ev];
                             tools = acc_tools;
+                        } elif kind == "session" {
+                            # the server tells us which session this landed in
+                            # (and the auto-generated title on the first turn)
+                            sid = str(ev["sid"]);
                         } elif kind == "error" {
                             err = str(ev["msg"]);
                         }
@@ -146,20 +212,7 @@ def:pub AgentChat() -> JsxElement {
             draft = "";
             busy = False;
         }
-    }
-
-    async def clear_chat() -> None {
-        if busy { return; }
-        try {
-            await fetch("/function/agent_reset", {
-                "method": "POST",
-                "headers": {"Content-Type": "application/json"},
-                "body": "{}"
-            });
-        } except Exception as e { err = str(e); }
-        turns = [];
-        draft = "";
-        reset_run();
+        await load_sessions();   # pick up turn counts and the auto-title
     }
 
     def on_key(e: KeyboardEvent) -> None {
@@ -232,7 +285,7 @@ def:pub AgentChat() -> JsxElement {
                     <div className="chat-title">Pitch Builder Agent</div>
                     <div className="chat-sub">Ask for ideas, a pitch, feasibility research, or mentor advice.</div>
                 </div>
-                <button className="btn-ghost" onClick={clear_chat} disabled={busy}>Clear</button>
+                <button className="btn-ghost" onClick={new_session} disabled={busy}>New chat</button>
             </div>
 
             <div className="chat-log">
@@ -299,5 +352,36 @@ def:pub AgentChat() -> JsxElement {
                 </button>
             </div>
         </section>
+
+        {#* ── right: session menu ── *#}
+        <aside className="agent-sessions">
+            <div className="sess-head">
+                <span className="sess-title">Chats</span>
+                <button className="sess-new" onClick={new_session} disabled={busy}>+ New</button>
+            </div>
+
+            {if len(sessions) == 0 {
+                <div className="sess-empty">No chats yet — send a message to start one.</div>
+            }}
+
+            {for s in sessions {
+                <div key={s["sid"]}
+                     className={"sess-item " + ("on" if s["sid"] == sid else "")}>
+                    <button className="sess-open" onClick={lambda { open_session(str(s["sid"])); }}>
+                        <span className="sess-name">{s["title"]}</span>
+                        <span className="sess-meta">
+                            {str(s["turns"]) + " msg"}{" · "}{str(s["created"])[5:10]}
+                        </span>
+                    </button>
+                    <button className="sess-del" title="Delete chat"
+                            onClick={lambda { delete_session(str(s["sid"])); }}>×</button>
+                </div>
+            }}
+
+            <div className="sess-foot">
+                Sessions are nodes on <code>root</code> — they persist across restarts,
+                with no database and no auth.
+            </div>
+        </aside>
     </div>;
 }

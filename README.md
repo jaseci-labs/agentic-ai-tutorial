@@ -37,8 +37,8 @@ export PATH="$HOME/.local/bin:$PATH"
 # 2. Install project dependencies
 jac install
 
-# 3. Set your OpenAI API key (you'll get one at the start of the session)
-export OPENAI_API_KEY="your-key-here"
+# 3. Set your OpenRouter API key (you'll get one at the start of the session)
+export OPENROUTER_API_KEY="your-key-here"
 ```
 
 `jac install` is not optional. The LLM capability (litellm and friends) is declared
