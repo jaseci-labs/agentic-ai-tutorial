@@ -503,7 +503,7 @@ async def do_brainstorm() -&gt; None {
 <div class="box"><h4>Typed contracts between stages</h4><p>Perceive returns an <code>Intent</code>, Plan returns a <code>Plan</code> — <code>obj</code>s the compiler enforces, not free text the next stage has to re-parse.</p></div>
 <div class="box"><h4>The plan directs the route</h4><p>Small talk runs <em>zero</em> capabilities; a full pitch request runs four. Nothing is hardcoded.</p></div>
 <div class="box"><h4>Cognition is separate from transport</h4><p>Stages know nothing about HTTP. <code>agent_chat_stream</code> is a thin SSE adapter — swap it for a CLI and nothing changes.</p></div>
-<div class="box"><h4>The agent narrates itself</h4><p>Stages, capabilities and individual tool calls publish to one event bus, so the trace the UI draws <em>is</em> the execution path. Capabilities run on a worker thread while the endpoint drains that bus, which is why a tool call shows up the moment it happens.</p></div>
+<div class="box"><h4>The agent narrates itself</h4><p>Stages, capabilities and individual tool calls publish to one event bus, so the trace the UI draws <em>is</em> the execution path. Capabilities run on a worker thread while the endpoint drains that bus, which is why a tool call shows up the moment it happens. Each call&#x27;s result follows in its own frame and is saved with the reply, so a reopened chat still shows what every tool returned.</p></div>
 </div>
 <div class="panel" style="margin-top:22px"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div><span class="fname">agent.jac — a capability is a node with an ability</span></div><pre><code data-jac>walker CapabilityExec {
     has ctx: RunCtx;

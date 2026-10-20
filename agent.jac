@@ -39,7 +39,8 @@ Six properties make this worth copying:
      all publish to an event bus, so the trace the UI draws IS the execution
      path rather than a reconstruction of it. Capabilities run on a worker
      thread while the endpoint drains that bus, which is what makes a tool call
-     visible the moment it happens instead of after the step finishes.
+     visible the moment it happens instead of after the step finishes. Each
+     call's result streams in its own frame and is saved with the reply.
 
   7. STATE IS THE GRAPH. Chat sessions and their turns are nodes hanging off
      `root`, so conversations persist across restarts with no database, no
@@ -79,32 +80,40 @@ def emit(ev: dict[str, any]) -> None {
 
 # ── Instrumented tools — the ReAct loop narrates itself ───────────────────────
 # The LLM is handed these wrappers rather than the raw tools, so every call it
-# decides to make becomes a frame on the wire the instant it happens.
+# decides to make becomes a frame on the wire the instant it happens, and what
+# the tool returned follows in a second frame carrying the same id.
+
+"""Announce a tool call; the returned id pairs it with its result frame."""
+def tool_called(name: str, arg: str) -> str {
+    cid = uuid.uuid4().hex[:8];
+    emit({"t": "tool", "id": cid, "name": name, "arg": arg, "phase": "call"});
+    return cid;
+}
+
+"""Publish what a tool returned, and hand it back to the caller unchanged."""
+def tool_returned(cid: str, name: str, result: str) -> str {
+    emit({"t": "tool", "id": cid, "name": name, "phase": "return", "result": result});
+    return result;
+}
 
 def tool_search_github(query: str, max_results: int = 3) -> str {
-    emit({"t": "tool", "name": "search_github", "arg": query, "phase": "call"});
-    out = search_github(query, max_results);
-    emit({"t": "tool", "name": "search_github", "phase": "return", "size": len(out)});
-    return out;
+    cid = tool_called("search_github", query);
+    return tool_returned(cid, "search_github", search_github(query, max_results));
 }
 sem tool_search_github = "Search GitHub for open-source projects matching a query. Returns repo names, descriptions and star counts. Call this to find prior art.";
 sem tool_search_github.query = "Keywords describing the project or problem area.";
 sem tool_search_github.max_results = "How many repositories to return. 3 is usually enough.";
 
 def tool_describe_tech_stack(project_description: str) -> str {
-    emit({"t": "tool", "name": "describe_tech_stack", "arg": project_description, "phase": "call"});
-    out = describe_tech_stack(project_description);
-    emit({"t": "tool", "name": "describe_tech_stack", "phase": "return", "size": len(out)});
-    return out;
+    cid = tool_called("describe_tech_stack", project_description);
+    return tool_returned(cid, "describe_tech_stack", describe_tech_stack(project_description));
 }
 sem tool_describe_tech_stack = "Recommend the best tech stack for a project. Call this before advising on implementation.";
 sem tool_describe_tech_stack.project_description = "What the project does, in a sentence or two.";
 
 def tool_estimate_build_time(description: str, team_size: int = 2) -> str {
-    emit({"t": "tool", "name": "estimate_build_time", "arg": description, "phase": "call"});
-    out = estimate_build_time(description, team_size);
-    emit({"t": "tool", "name": "estimate_build_time", "phase": "return", "size": len(out)});
-    return out;
+    cid = tool_called("estimate_build_time", description);
+    return tool_returned(cid, "estimate_build_time", estimate_build_time(description, team_size));
 }
 sem tool_estimate_build_time = "Estimate how long this project realistically takes to build at a hackathon. Call this to judge feasibility.";
 sem tool_estimate_build_time.description = "What the project does and roughly how big it is.";
@@ -304,9 +313,8 @@ walker:priv CapabilityExec {
         picked = pick_mentors(subject);
         advice: list[str] = [];
         for m in picked {
-            emit({"t": "tool", "name": "mentor", "arg": m, "phase": "call"});
-            advice.append(m + " mentor:\n" + do_advise(subject, m));
-            emit({"t": "tool", "name": "mentor", "arg": m, "phase": "return", "size": 0});
+            cid = tool_called("mentor", m);
+            advice.append(m + " mentor:\n" + tool_returned(cid, "mentor", do_advise(subject, m)));
         }
         self.ctx.findings += ["Mentor advice:\n" + "\n\n".join(advice)];
         self.summary = ", ".join(picked);
@@ -376,6 +384,7 @@ node ChatSession {
 node Turn {
     has role: str;
     has text: str;
+    has tools: list[dict[str, str]] = [];   # an assistant reply's tool calls and results
 }
 
 """All sessions, healing any row written before `sid` existed."""
@@ -420,11 +429,27 @@ def session_view(s: ChatSession) -> dict[str, any] {
     };
 }
 
-def add_turn(s: ChatSession, role: str, text: str) -> None {
-    s ++> Turn(role=role, text=text);
+def add_turn(s: ChatSession, role: str, text: str, tools: list[dict[str, str]]) -> None {
+    s ++> Turn(role=role, text=text, tools=tools);
     # Called from the streaming generator, which runs after the endpoint has
     # returned — outside the request that would otherwise commit the write.
     commit();
+}
+
+"""Fold one bus frame into the turn's tool log: a call opens an entry, and the
+return frame with the same id fills in its result."""
+def log_tool(log: list[dict[str, str]], ev: dict[str, any]) -> None {
+    if ev["t"] != "tool" { return; }
+    if ev["phase"] == "call" {
+        log.append({
+            "id": str(ev["id"]), "name": str(ev["name"]), "arg": str(ev["arg"]),
+            "cap": str(ev["cap"]), "result": ""
+        });
+        return;
+    }
+    for rec in log {
+        if rec["id"] == ev["id"] { rec["result"] = str(ev["result"]); }
+    }
 }
 
 def transcript(s: ChatSession, limit: int = 8) -> str {
@@ -444,7 +469,9 @@ def:pub agent_new_session() -> dict[str, any] {
 def:pub agent_history(sid: str) -> dict[str, any] {
     s = session_by_id(sid);
     if s is None { return {"turns": []}; }
-    return {"turns": [{"role": t.role, "text": t.text} for t in [s-->][?:Turn]]};
+    return {"turns": [
+        {"role": t.role, "text": t.text, "tools": t.tools} for t in [s-->][?:Turn]
+    ]};
 }
 
 def:pub agent_rename_session(sid: str, title: str) -> dict[str, any] {
@@ -528,7 +555,7 @@ def:pub agent_chat_stream(message: str, session_id: str = "") -> None {
         if session.title == "New chat" {
             session.title = message[:48] + ("…" if len(message) > 48 else "");
         }
-        add_turn(session, "user", message);
+        add_turn(session, "user", message, []);
 
         run_id = uuid.uuid4().hex;
         RUNS[run_id] = {"bus": Queue(), "ctx": ctx, "summary": ""};
@@ -536,6 +563,7 @@ def:pub agent_chat_stream(message: str, session_id: str = "") -> None {
         yield json.dumps({"t": "session", "sid": session.sid, "title": session.title});
 
         answer = "";
+        tool_log: list[dict[str, str]] = [];   # saved with the reply
         try {
             stages = [p-->][?:Stage];
             while stages {
@@ -559,6 +587,7 @@ def:pub agent_chat_stream(message: str, session_id: str = "") -> None {
                             ev = slot["bus"].get();
                             if ev["t"] == "__end__" { draining = False; continue; }
                             ev["cap"] = cap.key;
+                            log_tool(tool_log, ev);
                             yield json.dumps(ev);
                         }
                         wait task;
@@ -591,7 +620,7 @@ def:pub agent_chat_stream(message: str, session_id: str = "") -> None {
         }
 
         if answer {
-            add_turn(session, "assistant", answer);
+            add_turn(session, "assistant", answer, tool_log);
         }
         RUNS.pop(run_id, None);          # the run is over; drop its bus
         yield json.dumps({"t": "final", "sid": session.sid});
