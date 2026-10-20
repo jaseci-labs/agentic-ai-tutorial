@@ -37,8 +37,8 @@ export PATH="$HOME/.local/bin:$PATH"
 # 2. Install project dependencies
 jac install
 
-# 3. Set your OpenRouter API key (you'll get one at the start of the session)
-export OPENROUTER_API_KEY="your-key-here"
+# 3. Set your Anthropic API key (the model is Claude Haiku 4.5, called directly)
+export ANTHROPIC_API_KEY="your-key-here"
 ```
 
 `jac install` is not optional. The LLM capability (litellm and friends) is declared
@@ -169,6 +169,13 @@ Easy to get wrong, even after the code compiles:
 - **`visit` is deferred.** Node abilities run only *after* the current ability
   returns, so a walker can't route and collect results in the same ability.
   `step4_route.jac` gathers results at a later `CollectNode`.
+- **Graph writes persist.** Nodes attached to `root` survive between runs and
+  requests, so a walker that builds its graph on every run keeps adding copies.
+  Build it once with get-or-create — `visit [-->[?:MentorHub]] else { ... }` —
+  the way `step4_route.jac` builds its mentors.
+- **`visit ... by llm()` has an `intent`.** Put the routing instruction in
+  `intent="..."`; byLLM states it as the goal at the top of the routing prompt.
+  `incl_info` is for extra context, not instructions.
 - **Where code runs is inferred.** There is no `cl { }` block, `.cl.jac` suffix or
   `sv import` any more: JSX makes a declaration client code, and the rest is server.
 - **What is exposed is declared.** In a served app only `:pub` (or `:protect`)
