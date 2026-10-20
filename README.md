@@ -147,11 +147,11 @@ under `[client.vite]` in `jac.toml`. Colours are named once as theme tokens in
 on the components.
 
 These are plain `.jac` files: a declaration that contains JSX is compiled for the
-browser, everything else runs on the server. `walker:pub` declarations in `app.jac`
+browser, everything else runs on the server. `walker:pub` declarations in `main.jac`
 become HTTP endpoints automatically. The client imports them and spawns them directly:
 
 ```jac
-import from ..app { run_brainstorm }
+import from ..main { run_brainstorm }
 
 result = root spawn run_brainstorm(interests=interests, skills=skills);
 ideas  = result.reports[0];

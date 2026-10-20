@@ -456,7 +456,7 @@ with entry {
 </div>
 </div></section>
 <section id="app"><div class="wrap">
-<div class="sec-head"><h2>The full app</h2><p>The same four primitives wired into a full-stack app — server logic in <code>app.jac</code>, React-style client components in <code>frontend/</code>. One language, one command.</p></div>
+<div class="sec-head"><h2>The full app</h2><p>The same four primitives wired into a full-stack app — server logic in <code>main.jac</code>, React-style client components in <code>frontend/</code>. One language, one command.</p></div>
 <div class="panel"><div class="panel-bar"><div class="tl"><i></i><i></i><i></i></div><span class="fname">run it</span></div><pre><code data-jac>jac run
 # -&gt; http://localhost:8000
 
@@ -467,7 +467,7 @@ with entry {
 #   POST /walker/run_route        {title, problem, solution, ...}</code></pre></div>
 <div class="two">
 <div class="box"><h4>What the browser does</h4><ol class="flow"><li><strong>Generate</strong> — you enter interests and skills; the agent brainstorms three ideas.</li><li><strong>Extract</strong> — the idea you pick becomes a typed pitch with a tech stack and track.</li><li><strong>Invoke</strong> — the agent searches GitHub and estimates build time with real tools.</li><li><strong>Route</strong> — mentors are chosen by the model and answer in parallel.</li></ol></div>
-<div class="box"><h4>How the client calls the server</h4><p>A client component imports server walkers directly and spawns them — the HTTP call, serialization and typing are generated for you.</p><pre style="padding:14px 0 0"><code data-jac>import from ..app { run_brainstorm }
+<div class="box"><h4>How the client calls the server</h4><p>A client component imports server walkers directly and spawns them — the HTTP call, serialization and typing are generated for you.</p><pre style="padding:14px 0 0"><code data-jac>import from ..main { run_brainstorm }
 
 async def do_brainstorm() -&gt; None {
     result = root spawn run_brainstorm(

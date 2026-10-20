@@ -8,7 +8,7 @@ default-app = "jachacks-pitch-builder"
 # One app: the web UI plus the server endpoints behind it. `jac run` serves it.
 [apps.jachacks-pitch-builder]
 kind = "web-app"
-entry-point = "app"
+entry-point = "main"
 
 [dependencies]
 
