@@ -66,24 +66,37 @@ node GameDevMentor {
 
 node CollectNode {}  # walker walks here after all mentor visits to await workers
 
+# Anchors the mentor graph. Nodes attached to `root` persist between runs, so
+# the graph is built once and reused — not rebuilt (and duplicated) every run.
+node MentorHub {}
+
 walker HackathonAdvisor {
     has pitch: str;
-    has tasks: list = [];    # flow spawn handles (awaited with `wait`)
-    has mentors: list = [];  # parallel list: mentor name per task
-    has results: list = [];
+    has tasks: list[any] = [];    # flow spawn handles (awaited with `wait`)
+    has mentors: list[str] = [];  # parallel list: mentor name per task
+    has results: list[dict[str, str]] = [];
 
-    can route with Root entry {
-        collect = CollectNode();
-        here ++> WebDevMentor() ++> collect;
-        here ++> MobileMentor() ++> collect;
-        here ++> AIMLMentor() ++> collect;
-        here ++> GameDevMentor() ++> collect;
+    can find_hub with Root entry {
+        # Get-or-create: walk into the existing hub, or build it the first time.
+        visit [-->[?:MentorHub]] else {
+            hub = MentorHub();
+            collect = CollectNode();
+            hub ++> WebDevMentor() ++> collect;
+            hub ++> MobileMentor() ++> collect;
+            hub ++> AIMLMentor() ++> collect;
+            hub ++> GameDevMentor() ++> collect;
+            here ++> hub;
+            visit hub;
+        }
+    }
+
+    can route with MentorHub entry {
         # Route: LLM reads each node's description, visits the best match(es).
         # Each visited node flow-spawns an AdviceWorker — all run in parallel.
         visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch});
-        # `visit` is deferred, so results can't be collected here — the walker
-        # arrives at CollectNode only after every selected mentor has run.
-        visit collect;
+        # `visit` is deferred, so results can't be collected here. One two-hop
+        # reference reaches CollectNode once, after every selected mentor.
+        visit [--> -->];
     }
 
     can collect with CollectNode entry {

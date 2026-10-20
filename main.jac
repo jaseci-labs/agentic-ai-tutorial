@@ -1,19 +1,29 @@
 """Hackathon Pitch Builder — server logic + client entry.
 
 Follow-along mode:  jac run step1_generate.jac   (and step2, step3, step4)
-Full app mode:      jac start app.jac
+Full app mode:      jac run
                     open http://localhost:8000
 """
 
 import from tools { search_github, describe_tech_stack, estimate_build_time }
+# Streaming endpoints have no client RPC stub, so the entry module must import
+# them or the fetch 404s.
+import from agent {
+    agent_chat_stream, agent_architecture, agent_history,
+    agent_sessions, agent_new_session, agent_rename_session, agent_delete_session
+}
 
 # ── Mind patterns (Steps 1–3) ────────────────────────────────────────────────
 
-def brainstorm_ideas(interests: str, skills: str) -> str by llm();
+# `:priv` keeps a declaration server-side: callable from this app's own code, never
+# exposed over HTTP. The `walker:pub` declarations at the bottom are the whole API.
+def:priv brainstorm_ideas(interests: str, skills: str) -> str by llm();
 sem brainstorm_ideas = "Brainstorm 3 creative hackathon project ideas based on the person's interests and skills. For each idea give it a catchy name and a one-sentence description. Make them fun, feasible in 24 hours, and genuinely useful.";
 
-enum Difficulty { BEGINNER, INTERMEDIATE, ADVANCED }
-enum Track { WEB, MOBILE, AI_ML, GAME, OTHER }
+# String values, so the UI receives "ADVANCED" rather than 3: an enum crosses
+# the wire as its value, and a bare member's value is just its position.
+enum Difficulty: str { BEGINNER = "BEGINNER", INTERMEDIATE = "INTERMEDIATE", ADVANCED = "ADVANCED" }
+enum Track: str { WEB = "WEB", MOBILE = "MOBILE", AI_ML = "AI_ML", GAME = "GAME", OTHER = "OTHER" }
 
 obj HackathonPitch {
     has title: str;
@@ -25,10 +35,10 @@ obj HackathonPitch {
     has track: Track;
 }
 
-def structure_pitch(raw_idea: str) -> HackathonPitch by llm();
+def:priv structure_pitch(raw_idea: str) -> HackathonPitch by llm();
 sem structure_pitch = "Turn a raw hackathon idea into a structured, compelling pitch with a title, problem statement, solution, tech stack, wow factor, difficulty, and track.";
 
-def research_idea(idea: str) -> str by llm(
+def:priv research_idea(idea: str) -> str by llm(
     tools=[search_github, describe_tech_stack, estimate_build_time]
 );
 sem research_idea = "Research a hackathon project idea: find similar open-source projects on GitHub, recommend the right tech stack, and give an honest estimate of whether it's buildable in 24-48 hours with a small team.";
@@ -42,11 +52,11 @@ sem research_idea = "Research a hackathon project idea: find similar open-source
 # The walker routes first, launching all workers concurrently, then awaits them all.
 
 # Standalone advise functions — one per mentor type
-def advise_web(pitch: str) -> str by llm();
-def advise_mobile(pitch: str) -> str by llm();
-def advise_aiml(pitch: str) -> str by llm();
-def advise_game(pitch: str) -> str by llm();
-def advise_jac(pitch: str) -> str by llm(tools=[search_github]);
+def:priv advise_web(pitch: str) -> str by llm();
+def:priv advise_mobile(pitch: str) -> str by llm();
+def:priv advise_aiml(pitch: str) -> str by llm();
+def:priv advise_game(pitch: str) -> str by llm();
+def:priv advise_jac(pitch: str) -> str by llm(tools=[search_github]);
 
 sem advise_web = "Give practical next-step advice for building this web app at a hackathon. Suggest concrete first tasks, tools, and APIs.";
 sem advise_mobile = "Give practical next-step advice for building this mobile app at a hackathon. Suggest concrete first tasks, frameworks, and libraries.";
@@ -55,7 +65,7 @@ sem advise_game = "Give practical next-step advice for building this game at a h
 sem advise_jac = "Give practical next-step advice for building this project using Jac and Jaseci. Use search_github to find relevant Jac/Jaseci example projects to point the builder at.";
 
 # Worker walker — runs concurrently, one per selected mentor
-walker AdviceWorker {
+walker:priv AdviceWorker {
     has pitch: str;
     has mentor: str;
     has advice: str = "";
@@ -122,33 +132,40 @@ node JacExpert {
 
 node CollectNode {}   # walker walks here after all mentor visits to await workers
 
-walker HackathonAdvisor {
-    has pitch: str;
-    has tasks: list = [];    # flow spawn handles (awaited with `wait`)
-    has mentors: list = [];  # parallel list: mentor name per task
-    has results: list = [];
+# Anchors the mentor graph. Nodes attached to `root` persist, so the graph is
+# built on the first request and reused after — routing always sees five mentors.
+node MentorHub {}
 
-    can route with Root entry {
-        web  = WebDevMentor();
-        mob  = MobileMentor();
-        aiml = AIMLMentor();
-        game = GameDevMentor();
-        jac  = JacExpert();
-        collect = CollectNode();
-        here ++> web;
-        here ++> mob;
-        here ++> aiml;
-        here ++> game;
-        here ++> jac;
-        web ++> collect;
-        mob ++> collect;
-        aiml ++> collect;
-        game ++> collect;
-        jac ++> collect;
+walker:priv HackathonAdvisor {
+    has pitch: str;
+    has tasks: list[any] = [];    # flow spawn handles (awaited with `wait`)
+    has mentors: list[str] = [];  # parallel list: mentor name per task
+    has results: list[dict[str, str]] = [];
+
+    can find_hub with Root entry {
+        # Get-or-create: walk into the existing hub, or build it the first time.
+        visit [-->[?:MentorHub]] else {
+            hub = MentorHub();
+            collect = CollectNode();
+            hub ++> WebDevMentor() ++> collect;
+            hub ++> MobileMentor() ++> collect;
+            hub ++> AIMLMentor() ++> collect;
+            hub ++> GameDevMentor() ++> collect;
+            hub ++> JacExpert() ++> collect;
+            here ++> hub;
+            visit hub;
+        }
+    }
+
+    can route with MentorHub entry {
         # Route: LLM reads each node's `description`, visits the best matches.
         # Each visited node flow-spawns an AdviceWorker — all run in parallel.
-        visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch, "instructions": "Only visit the mentors most relevant to the pitch"});
-        visit collect;
+        visit [-->] by llm(
+            intent="Only visit the mentors most relevant to the pitch",
+            incl_info={"Hackathon pitch": self.pitch}
+        );
+        # One two-hop reference reaches CollectNode once, after the mentors.
+        visit [--> -->];
     }
 
     can collect with CollectNode entry {
@@ -160,7 +177,7 @@ walker HackathonAdvisor {
     }
 }
 
-# ── Public server functions (called from frontend via sv import) ───────────────
+# ── Public server functions (imported and spawned by the frontend) ────────────
 
 walker:pub run_brainstorm {
     has interests: str;
@@ -197,7 +214,7 @@ walker:pub run_route {
     has title: str;
     has problem: str;
     has solution: str;
-    has tech_stack: list;
+    has tech_stack: list[str];
     has wow_factor: str;
     has research: str;
 
@@ -222,11 +239,11 @@ Research findings:
 
 # ── Client entry ───────────────────────────────────────────────────────────────
 
-cl {
-    import "./frontend/styles.css";
-    import from frontend.App { App }
+# No wrapper needed: the JSX body and the string-path CSS import are what place
+# this code in the browser bundle.
+import "./frontend/styles.css";
+import from frontend.App { App }
 
-    def:pub app() -> JsxElement {
-        return <App />;
-    }
+def:pub app() -> JsxElement {
+    return <App />;
 }
