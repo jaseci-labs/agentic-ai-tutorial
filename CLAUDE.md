@@ -5,6 +5,51 @@ When you see Jac code in this project, use this guide to understand and extend i
 
 ---
 
+## Jac Skills Map
+
+This guide is the quick reference. The full instructions live in the `jac-*`
+skills — load the matching one with the `skill` tool before working in that
+area. Load `jac-core-cheatsheet` first for any non-trivial edit; it is the
+language baseline everything else assumes.
+
+| If you are working on… | Load |
+|---|---|
+| Any Jac file, basic syntax, imports, control flow | `jac-core-cheatsheet` |
+| Type annotations, unions, generics, a type error | `jac-types` |
+| Declaring `obj` / `enum` / node / walker state (`has`) | `jac-has-fields` |
+| Walker traversal, `visit`, abilities (Patterns 5 & 7 here) | `jac-walker-patterns` |
+| Nodes, edges, graph queries, multi-hop reads | `jac-node-edge-patterns` |
+| `by llm()` — Generate, Extract, Invoke, Loop (Patterns 1–3, 6) | `jac-by-llm` |
+| Futures, `flow ... spawn`, threads, async | `jac-concurrency` |
+| Server endpoints, `:pub` / `:protect`, REST routes | `jac-sv-endpoints` |
+| SSE / streaming output (`agent_chat_stream` in `agent.jac`) | `jac-sv-streaming` |
+| Storing or querying graph data, schema changes | `jac-sv-persistence` |
+| Client components, JSX, props, event handlers (`frontend/*.jac`) | `jac-cl-components` |
+| Multi-page navigation, layouts, redirects | `jac-cl-routing` |
+| App structure, state shell, file layout | `jac-cl-organization` |
+| Tailwind classes, theme tokens (`frontend/styles.css`) | `jac-cl-styling` |
+| Browser APIs from client code (localStorage, WebSocket) | `jac-cl-js-interop` |
+| Wiring `app.jac` as the fullstack entry, `root spawn` from the UI | `jac-fullstack-patterns` |
+| Anything in `jac.toml` (deps, `[byllm.model]`, `[serve]`) | `jac-config` |
+| A build fails or diagnostics look wrong (`jac check`) | `jac-debugging` |
+| Build/serve isn't doing what it should despite compiling | `jac-build-verify-loop` |
+| Writing or running tests | `jac-testing` |
+| A source file has grown past ~100 lines | `jac-impl-files` |
+| Adding an npm package to `jac.toml` | `jac-npm-packages` |
+| Starting a new project or picking a project kind | `jac-scaffold`, `jac-project-kinds` |
+| Auth (server side, or login UI) | `jac-sv-auth`, `jac-cl-auth` |
+| Sharing data between users, permissions, roles | `jac-sv-multi-user` |
+| Splitting into services, `sv import` | `jac-sv-microservices` |
+| Production deploy, databases, secrets, k8s | `jac-sv-deploy` |
+| Packaging as a PyPI wheel / npm package | `jac-packaging` |
+| Native binaries, shared libs, desktop, mobile | `jac-native`, `jac-native-shared`, `jac-desktop-app`, `jac-mobile-app` |
+| Building with jac-shadcn components/blocks | `jac-shadcn-components`, `jac-shadcn-blocks` |
+
+The skills are loaded fresh from disk each time, so they always reflect the
+installed Jac version. Where a skill and this guide disagree, trust the skill.
+
+---
+
 ## Language Basics
 
 Jac is a Python-substrate language. Most Python libraries work via `import`.
