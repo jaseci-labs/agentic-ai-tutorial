@@ -157,7 +157,10 @@ walker:priv HackathonAdvisor {
         jac ++> collect;
         # Route: LLM reads each node's `description`, visits the best matches.
         # Each visited node flow-spawns an AdviceWorker — all run in parallel.
-        visit [-->] by llm(incl_info={"Hackathon pitch": self.pitch, "instructions": "Only visit the mentors most relevant to the pitch"});
+        visit [-->] by llm(
+            intent="Only visit the mentors most relevant to the pitch",
+            incl_info={"Hackathon pitch": self.pitch}
+        );
         visit collect;
     }
 
