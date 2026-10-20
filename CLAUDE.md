@@ -29,7 +29,7 @@ language baseline everything else assumes.
 | App structure, state shell, file layout | `jac-cl-organization` |
 | Tailwind classes, theme tokens (`frontend/styles.css`) | `jac-cl-styling` |
 | Browser APIs from client code (localStorage, WebSocket) | `jac-cl-js-interop` |
-| Wiring `app.jac` as the fullstack entry, `root spawn` from the UI | `jac-fullstack-patterns` |
+| Wiring `main.jac` as the fullstack entry, `root spawn` from the UI | `jac-fullstack-patterns` |
 | Anything in `jac.toml` (deps, `[byllm.model]`, `[serve]`) | `jac-config` |
 | A build fails or diagnostics look wrong (`jac check`) | `jac-debugging` |
 | Build/serve isn't doing what it should despite compiling | `jac-build-verify-loop` |
@@ -372,5 +372,5 @@ Always add `sem` to tool functions used in `by llm(tools=[...])`.
 | `def:pub f() -> Generator { report gen(); }` | `-> None` — a def that only `report`s a stream returns nothing (`E1004`) |
 | Graph writes inside a reported generator | It runs after the endpoint returned, outside the request: call `commit()`, and don't assume the caller owns what it creates |
 | Expecting an enum's name on the client | An enum crosses the wire as its value — use `enum E: str { A = "A" }` when the UI needs the name |
-| `jac start app.jac` | `jac run` — serves the app declared under `[apps.<name>]` in jac.toml |
-| `entry-point = "app.jac"` | A dotted module name, under `[apps.<name>]`: `entry-point = "app"` |
+| `jac start main.jac` | `jac run` — serves the app declared under `[apps.<name>]` in jac.toml |
+| `entry-point = "main.jac"` | A dotted module name, under `[apps.<name>]`: `entry-point = "main"` |

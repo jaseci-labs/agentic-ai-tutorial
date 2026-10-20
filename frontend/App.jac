@@ -1,11 +1,11 @@
 """Main app component — owns all state and server calls.
-Imported by app.jac's client entry.
+Imported by main.jac's client entry.
 
 State flows downward through props; async handlers live here.
 Each step unlocks when the previous one completes.
 """
 
-import from ..app { run_brainstorm, run_structure, run_research, run_route }
+import from ..main { run_brainstorm, run_structure, run_research, run_route }
 # run_route args: title, problem, solution, tech_stack, wow_factor, research
 
 import from Step1 { Step1 }
