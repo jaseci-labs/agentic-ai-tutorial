@@ -49,6 +49,53 @@ glob PANEL: str = "rounded-2xl border border-line bg-panel shadow-lg shadow-blac
 
 glob GHOST_BTN: str = "rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-dim transition hover:border-line-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-40";
 
+# What the loading indicator says while each stage runs.
+glob STAGE_ACTIVITY: dict[str, str] = {
+    "perceive": "Thinking…",
+    "plan": "Planning…",
+    "act": "Calling tools…",
+    "synthesize": "Synthesizing…"
+};
+
+"""The tool calls behind one reply, each result behind a disclosure. A call
+whose `result` is still None is in flight."""
+def:pub ToolCalls(calls: list[dict[str, any]]) -> JsxElement {
+    # GitHub search answers in JSON, which reads best preformatted; the
+    # LLM-backed tools answer in markdown.
+    rows = [
+        {
+            "call": c,
+            "kind": "pending" if c["result"] is None else (
+                "json" if str(c["result"]).strip().startswith("[")
+                    or str(c["result"]).strip().startswith("{") else "text"
+            )
+        }
+        for c in calls
+    ];
+
+    return <div className="space-y-1.5">
+        {for (i, r) in enumerate(rows) {
+            <details key={"call" + str(i)} className="group rounded-lg border border-line bg-canvas/40 text-xs">
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 [&::-webkit-details-marker]:hidden">
+                    <span className="text-faint transition-transform group-open:rotate-90">▸</span>
+                    <span className="shrink-0 font-mono font-medium text-inv">{r["call"]["name"]}</span>
+                    <span className="min-w-0 flex-1 truncate text-dim">{r["call"]["arg"]}</span>
+                    <span className={"shrink-0 text-faint " + ("animate-pulse" if r["kind"] == "pending" else "")}>
+                        {"running…" if r["kind"] == "pending" else str(len(str(r["call"]["result"]))) + " chars"}
+                    </span>
+                </summary>
+                <div className="max-h-80 overflow-auto border-t border-line px-3 py-2.5">
+                    {if r["kind"] == "pending" { <TypingDots /> }}
+                    {if r["kind"] == "json" {
+                        <pre className="font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap text-fg/80">{r["call"]["result"]}</pre>
+                    }}
+                    {if r["kind"] == "text" { <Markdown text={str(r["call"]["result"])} /> }}
+                </div>
+            </details>
+        }}
+    </div>;
+}
+
 def:pub AgentChat() -> JsxElement {
     has arch: list[dict[str, any]] = [];
     has turns: list[dict[str, any]] = [];  # {role, text}
@@ -59,7 +106,8 @@ def:pub AgentChat() -> JsxElement {
     has cap_state: dict[str, str] = {};    # cap key    -> idle|active|done|skipped
     has cap_detail: dict[str, str] = {};   # cap key    -> short result summary
     has notes: list[dict[str, any]] = [];  # {id,label,value} from Perceive/Plan
-    has tools: list[dict[str, any]] = [];  # {name,arg,phase,cap}
+    has tools: list[dict[str, any]] = [];  # {id,name,arg,cap,result} — result None until it returns
+    has active_stage: str = "";  # the stage running now, named by the loading indicator
     has err: str = "";
     has sessions: list[dict[str, any]] = [];
     has sid: str = "";           # active session
@@ -150,6 +198,7 @@ def:pub AgentChat() -> JsxElement {
         cap_detail = {};
         notes = [];
         tools = [];
+        active_stage = "";
         err = "";
     }
 
@@ -215,6 +264,7 @@ def:pub AgentChat() -> JsxElement {
                         } elif kind == "stage" {
                             st_map[ev["id"]] = ev["status"];
                             stage_state = {**st_map};
+                            if ev["status"] == "active" { active_stage = str(ev["id"]); }
                         } elif kind == "cap" {
                             cp_map[ev["id"]] = ev["status"];
                             cap_state = {**cp_map};
@@ -226,7 +276,16 @@ def:pub AgentChat() -> JsxElement {
                             acc_notes = acc_notes + [ev];
                             notes = acc_notes;
                         } elif kind == "tool" {
-                            acc_tools = acc_tools + [ev];
+                            # A call opens an entry; its return, matched by id,
+                            # fills in the result.
+                            if ev["phase"] == "call" {
+                                acc_tools = acc_tools + [{**ev, "result": None}];
+                            } else {
+                                acc_tools = [
+                                    ({**c, "result": ev["result"]} if c["id"] == ev["id"] else c)
+                                    for c in acc_tools
+                                ];
+                            }
                             tools = acc_tools;
                         } elif kind == "session" {
                             # the server tells us which session this landed in
@@ -244,7 +303,7 @@ def:pub AgentChat() -> JsxElement {
             # Always hand the composer back, even if the stream died mid-flight —
             # otherwise the textarea stays disabled and the turn is unrecoverable.
             if acc {
-                local_turns = local_turns + [{"role": "assistant", "text": acc}];
+                local_turns = local_turns + [{"role": "assistant", "text": acc, "tools": acc_tools}];
                 turns = local_turns;
             }
             draft = "";
@@ -313,9 +372,12 @@ def:pub AgentChat() -> JsxElement {
                         }}
                         {for (i, t) in enumerate(tools) {
                             <div key={"t" + str(i)} className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2">
-                                <span className={"truncate " + ("text-inv" if t["phase"] == "call" else "text-faint")}>{t["name"]}</span>
-                                <span className={"break-words " + ("text-fg/90" if t["phase"] == "call" else "text-faint")}>
-                                    {t["arg"] if t["phase"] == "call" else ("← " + str(t["size"] or 0) + " chars")}
+                                <span className="truncate text-inv">{t["name"]}</span>
+                                <span className="break-words text-fg/90">
+                                    {t["arg"]}
+                                    <span className="text-faint">
+                                        {" … running" if t["result"] is None else " ← " + str(len(str(t["result"]))) + " chars"}
+                                    </span>
                                 </span>
                             </div>
                         }}
@@ -367,10 +429,21 @@ def:pub AgentChat() -> JsxElement {
                                 </div>
                             }}
                             {if t["role"] != "user" {
-                                <div className="max-w-[92%] min-w-0 rounded-2xl rounded-bl-md border border-line bg-panel-2 px-4 py-3">
-                                    <Markdown text={str(t["text"])} />
+                                <div className="flex max-w-[92%] min-w-0 flex-col items-start gap-2">
+                                    {if len(t["tools"] or []) > 0 {
+                                        <div className="w-full"><ToolCalls calls={t["tools"]} /></div>
+                                    }}
+                                    <div className="min-w-0 rounded-2xl rounded-bl-md border border-line bg-panel-2 px-4 py-3">
+                                        <Markdown text={str(t["text"])} />
+                                    </div>
                                 </div>
                             }}
+                        </div>
+                    }}
+
+                    {if busy and len(tools) > 0 {
+                        <div className="flex justify-start">
+                            <div className="w-full max-w-[92%]"><ToolCalls calls={tools} /></div>
                         </div>
                     }}
 
@@ -386,7 +459,7 @@ def:pub AgentChat() -> JsxElement {
                     {if busy and not draft {
                         <div className="flex justify-start">
                             <div className="rounded-2xl rounded-bl-md border border-line bg-panel-2 px-4 py-3.5">
-                                <TypingDots />
+                                <TypingDots label={STAGE_ACTIVITY[active_stage] or "Thinking…"} />
                             </div>
                         </div>
                     }}

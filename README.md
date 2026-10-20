@@ -122,6 +122,8 @@ What makes it worth copying rather than just wiring tools onto a loop:
   publish to one event bus, so the trace the UI draws *is* the execution path.
   Capabilities run on a worker thread while the endpoint drains that bus — which
   is why a tool call appears the moment it happens, not after the step finishes.
+  Each call's result follows in its own frame and is saved with the reply, so a
+  reopened chat still shows what every tool returned.
 
 Streaming is real SSE: a `def:pub` that `report`s a generator, with the final
 answer streaming token by token via `by llm(stream=True)`. The generator runs
