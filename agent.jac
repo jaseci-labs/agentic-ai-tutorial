@@ -335,7 +335,6 @@ def ensure_agent_graph() -> AgentPipeline {
 
     p = AgentPipeline();
     root.shared ++> p;
-    grant(p, level=AccessLevel.READ);
 
     s1 = Stage(key="perceive", label="Perceive", ord=1,
                blurb="Read the message in context and extract a typed Intent.");
@@ -357,25 +356,13 @@ def ensure_agent_graph() -> AgentPipeline {
         blurb="Search GitHub, pick a stack, estimate build time.");
     s3 ++> CapabilityNode(key="mentors", label="Mentors", pattern="Route + Spawn",
         blurb="Ask the most relevant domain experts.");
-
-    # The pipeline is shared, read-only config: anonymous callers must be able to
-    # traverse it and spawn walkers at its nodes.
-    for st in [s1, s2, s3, s4] {
-        grant(st, level=AccessLevel.READ);
-        for c in [st-->][?:CapabilityNode] { grant(c, level=AccessLevel.READ); }
-    }
     return p;
 }
 
 # ── Conversation memory, persisted in the graph ───────────────────────────────
 
-# Sessions hang off `root.shared` — the deployment's public commons — and persist
-# across restarts for free: no database, no schema, no ORM. `root.shared` rather
-# than `root` is deliberate: with no auth, each anonymous request gets its own
-# `root`, so anything written there would be invisible to the next request (and
-# the write is refused outright). The commons is what makes the demo work
-# shareable-as-is. Swapping these to `root` + `:priv` is all per-user isolation
-# would take, since every logged-in user gets their own root automatically.
+# Sessions hang off `root.shared` — the public commons every caller shares — and
+# persist across restarts for free: no database, no schema, no ORM.
 
 # Every field carries a default. A `has` with no default cannot be loaded from a
 # row written before that field existed ("required field missing from stored
@@ -389,13 +376,6 @@ node ChatSession {
 node Turn {
     has role: str;
     has text: str;
-
-    # Turns are written while the reply streams — after the endpoint has returned,
-    # so not as the caller who reads them back later. Declaring the policy on the
-    # archetype keeps every Turn readable and deletable, whoever wrote it.
-    def __jac_access__ -> AccessLevel {
-        return AccessLevel.WRITE;
-    }
 }
 
 """All sessions, healing any row written before `sid` existed."""
@@ -421,12 +401,6 @@ def new_session() -> ChatSession {
         created=datetime.now().isoformat(timespec="seconds")
     );
     root.shared ++> s;
-    # Nodes on the commons are owned by the shared root, so an anonymous caller
-    # has no rights on them by default. Without this grant the writes still
-    # *appear* to work — the in-memory object updates — but the attach is
-    # refused, so turns silently vanish on restart. WRITE because callers
-    # both attach Turns (connect) and retitle the session (field write).
-    grant(s, level=AccessLevel.WRITE);
     return s;
 }
 
@@ -446,30 +420,8 @@ def session_view(s: ChatSession) -> dict[str, any] {
     };
 }
 
-# Writing to a node you do not own is refused. Rather than granting ever-wider
-# permissions to anonymous callers, route the write through an ability ON the
-# target: a walker that lands on the session mutates it with the session's own
-# authority. This is the documented remedy, and it keeps the commons writable
-# without opening it up to arbitrary field writes from outside.
-walker:priv AppendTurn {
-    has role: str;
-    has text: str;
-
-    can add with ChatSession entry {
-        here ++> Turn(role=self.role, text=self.text);
-    }
-}
-
-walker:priv RetitleSession {
-    has title: str;
-
-    can retitle with ChatSession entry {
-        here.title = self.title;
-    }
-}
-
 def add_turn(s: ChatSession, role: str, text: str) -> None {
-    s spawn AppendTurn(role=role, text=text);
+    s ++> Turn(role=role, text=text);
     # Called from the streaming generator, which runs after the endpoint has
     # returned — outside the request that would otherwise commit the write.
     commit();
@@ -574,9 +526,7 @@ def:pub agent_chat_stream(message: str, session_id: str = "") -> None {
 
         # First thing the user says names the chat, the way ChatGPT does it.
         if session.title == "New chat" {
-            session spawn RetitleSession(
-                title=message[:48] + ("…" if len(message) > 48 else "")
-            );
+            session.title = message[:48] + ("…" if len(message) > 48 else "");
         }
         add_turn(session, "user", message);
 
