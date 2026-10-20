@@ -132,36 +132,40 @@ node JacExpert {
 
 node CollectNode {}   # walker walks here after all mentor visits to await workers
 
+# Anchors the mentor graph. Nodes attached to `root` persist, so the graph is
+# built on the first request and reused after — routing always sees five mentors.
+node MentorHub {}
+
 walker:priv HackathonAdvisor {
     has pitch: str;
     has tasks: list[any] = [];    # flow spawn handles (awaited with `wait`)
     has mentors: list[str] = [];  # parallel list: mentor name per task
     has results: list[dict[str, str]] = [];
 
-    can route with Root entry {
-        web  = WebDevMentor();
-        mob  = MobileMentor();
-        aiml = AIMLMentor();
-        game = GameDevMentor();
-        jac  = JacExpert();
-        collect = CollectNode();
-        here ++> web;
-        here ++> mob;
-        here ++> aiml;
-        here ++> game;
-        here ++> jac;
-        web ++> collect;
-        mob ++> collect;
-        aiml ++> collect;
-        game ++> collect;
-        jac ++> collect;
+    can find_hub with Root entry {
+        # Get-or-create: walk into the existing hub, or build it the first time.
+        visit [-->[?:MentorHub]] else {
+            hub = MentorHub();
+            collect = CollectNode();
+            hub ++> WebDevMentor() ++> collect;
+            hub ++> MobileMentor() ++> collect;
+            hub ++> AIMLMentor() ++> collect;
+            hub ++> GameDevMentor() ++> collect;
+            hub ++> JacExpert() ++> collect;
+            here ++> hub;
+            visit hub;
+        }
+    }
+
+    can route with MentorHub entry {
         # Route: LLM reads each node's `description`, visits the best matches.
         # Each visited node flow-spawns an AdviceWorker — all run in parallel.
         visit [-->] by llm(
             intent="Only visit the mentors most relevant to the pitch",
             incl_info={"Hackathon pitch": self.pitch}
         );
-        visit collect;
+        # One two-hop reference reaches CollectNode once, after the mentors.
+        visit [--> -->];
     }
 
     can collect with CollectNode entry {
